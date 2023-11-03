@@ -1,0 +1,8 @@
+*.pdf
+*.png
+*.root
+*.txt
+*.out
+*.pyc
+.ipynb_checkpoints/
+__pycache__/
