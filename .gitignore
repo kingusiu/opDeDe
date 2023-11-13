@@ -3,6 +3,7 @@
 *.root
 *.txt
 *.out
+*.pkl
 *.pyc
 .ipynb_checkpoints/
 __pycache__/

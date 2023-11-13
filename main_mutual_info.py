@@ -43,7 +43,7 @@ def compute_entropy(z):
 ##################################
 
 class MI_Model(nn.Module):
-    def __init__(self, nb_sensors=8):
+    def __init__(self, B_N=8):
         super(MI_Model, self).__init__()
         self.features_a = nn.Sequential(
             nn.Linear(1, 32), nn.ReLU(),
@@ -52,7 +52,7 @@ class MI_Model(nn.Module):
         )
 
         self.features_b = nn.Sequential(
-            nn.Linear(nb_sensors, 32), nn.ReLU(),
+            nn.Linear(B_N, 32), nn.ReLU(),
             nn.Linear(32, 32), nn.ReLU(),
             nn.Linear(32, 128), nn.ReLU(),
         )
@@ -72,7 +72,7 @@ class MI_Model(nn.Module):
 
 def train(model,input_a,input_b,batch_size,nb_epochs): 
 
-    entropy = compute_entropy(input_b)
+    entropy = 0 #compute_entropy(input_b) -> check how to compute entropy values for sanity check (not a binary array anymore)
     print(f'Entropy : {entropy:.3f}')
 
     train_mi = []
@@ -106,6 +106,8 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
 
         sys.stdout.flush()
 
+    return acc_mi
+
 
 def test(model, input_a, input_b, batch_size):
 
@@ -121,30 +123,46 @@ def test(model, input_a, input_b, batch_size):
 
     test_acc_mi /= (input_a.size(0) // batch_size)
     test_acc_mi /= math.log(2)
-    print(f'test {test_acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
+
+    return test_acc_mi
 
 
 
 if __name__ == '__main__':
 
-    # create training and test inputs
-    config = [0.09, 8, 0., 'ring', 'ring (large)']
-    alpha_train, hits_train = inge.generate(nb=int(1e5),r_sensor=config[0],nb_sensors=config[1],epsilon=config[2],sensor_config=config[3])
-    alpha_test, hits_test = inge.generate(nb=int(1e5),r_sensor=config[0],nb_sensors=config[1],epsilon=config[2],sensor_config=config[3])
+    samples_N = int(1e5)
 
-    # runtime params
-    batch_size = 512
-    nb_epochs = 15
+    configs = {
+        'good calo': 'data/kinga2_t0.pkl',
+        'bad calo' : 'data/kinga2_badcalo_t0.pkl'
+    }
 
-    # create model
-    model = MI_Model()
-    model.to(uti.device)
+    for config_name, file_path in configs.items():
 
-    # train model
-    train(model, alpha_train, hits_train, batch_size, nb_epochs)
+        print(f'running train and test for {config_name}')
 
-    # test model
-    test(model, alpha_test, hits_test, batch_size)
+        # create training and test inputs
+        A_train, B_train, A_test, B_test = inge.read_inputs_from_file(file_path, b_label='sensor_energy')
+        # A_train, B_train, A_test, B_test = inge.generate_inputs(samples_N=samples_N)
+        B_N = B_train.size(1)
+
+        # import ipdb; ipdb.set_trace()
+
+        # runtime params
+        batch_size = A_train.size(0) if A_train.size(0) < 256 else 256
+        nb_epochs = 10
+
+        # create model
+        model = MI_Model(B_N=B_N)
+        model.to(uti.device)
+
+        # train model
+        train_acc_mi = train(model, A_train, B_train, batch_size, nb_epochs)
+        print(f'train {config_name}: {train_acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
+
+        # test model
+        test_acc_mi = test(model, A_test, B_test, batch_size)
+        print(f'test {config_name}: {test_acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
 
 
 

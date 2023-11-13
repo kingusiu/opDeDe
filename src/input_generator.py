@@ -1,5 +1,7 @@
 import math
 import torch, torchvision
+import pandas as pd
+import numpy as np
 
 import src.util as uti
 
@@ -13,7 +15,7 @@ import src.util as uti
 def generate(
         nb,
         r_sensor=0.05,
-        nb_sensors=16,
+        B_N=16,
         epsilon=math.pi/10,
         sensor_config='ring',
         single_configuration=True):
@@ -23,8 +25,8 @@ def generate(
 
     if sensor_config == 'random':
         ## Randomly placed sensors
-        x=torch.rand(1 if single_configuration else nb, nb_sensors)*2-1
-        y=torch.rand(1 if single_configuration else nb, nb_sensors)*2-1
+        x=torch.rand(1 if single_configuration else nb, B_N)*2-1
+        y=torch.rand(1 if single_configuration else nb, B_N)*2-1
 
         # x = torch.tensor([[ 0.3383,  0.6828, -0.8881, -0.1610,  0.1105, -0.5459, -0.1385, -0.6813,
         #     0.8355,  0.2302,  0.0901,  0.0475,  0.7599, -0.6489, -0.6065, -0.6200]])
@@ -34,14 +36,14 @@ def generate(
 
     elif sensor_config == 'ring':
         # Sensors placed on a circle
-        theta = 2*math.pi/nb_sensors
-        x = 0.5*torch.cos(torch.arange(0, nb_sensors) * theta)
-        y = 0.5*torch.sin(torch.arange(0, nb_sensors) * theta)
+        theta = 2*math.pi/B_N
+        x = 0.5*torch.cos(torch.arange(0, B_N) * theta)
+        y = 0.5*torch.sin(torch.arange(0, B_N) * theta)
 
     elif sensor_config == 'linear':
         # Sensors placed on a line
         theta = math.pi/4
-        x = (0.1 + torch.arange(0, nb_sensors)) * torch.cos(torch.tensor(theta)) * r_sensor * 2
+        x = (0.1 + torch.arange(0, B_N)) * torch.cos(torch.tensor(theta)) * r_sensor * 2
         y = x
 
     
@@ -54,6 +56,14 @@ def generate(
     return alpha.unsqueeze(-1).to(uti.device), z.to(uti.device)
 
 
+def generate_inputs(samples_N=int(1e5)):
+
+    config = [0.09, 8, 0., 'ring', 'ring (large)']
+    alpha_train, hits_train = generate(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
+    alpha_test, hits_test = generate(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
+
+    return alpha_train, hits_train, alpha_test, hits_test
+
 
 ##################################
 #       read inputs from file
@@ -61,8 +71,14 @@ def generate(
 # y ... deposited energy
 ##################################
 
-def read_inputs(file): 
+def read_inputs_from_file(file_path, b_label='sensor_energy'): 
+
+    # import ipdb; ipdb.set_trace()
 
     df = pd.read_pickle(file_path)
 
-    return df['true_energy'], df['total_dep_energy']
+    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
+    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).to(uti.device)
+
+    return A, B, A, B  # for the moment same dataset for test and train
+
