@@ -5,14 +5,14 @@ import numpy as np
 
 import src.util as uti
 
-##################################
-#       generate inputs
+##############################################
+#       generate toy sensor inputs
 # alpha ... particle shooting angle
 # z ... binary hit/no-hit array
-##################################
+##############################################
 
 
-def generate(
+def generate_sensor_responses(
         nb,
         r_sensor=0.05,
         B_N=16,
@@ -56,11 +56,11 @@ def generate(
     return alpha.unsqueeze(-1).to(uti.device), z.to(uti.device)
 
 
-def generate_inputs(samples_N=int(1e5)):
+def generate_sensor_inputs(samples_N=int(1e5)):
 
     config = [0.09, 8, 0., 'ring', 'ring (large)']
-    alpha_train, hits_train = generate(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
-    alpha_test, hits_test = generate(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
+    alpha_train, hits_train = generate_sensor_responses(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
+    alpha_test, hits_test = generate_sensor_responses(nb=samples_N,r_sensor=config[0],B_N=config[1],epsilon=config[2],sensor_config=config[3])
 
     return alpha_train, hits_train, alpha_test, hits_test
 
@@ -81,4 +81,20 @@ def read_inputs_from_file(file_path, b_label='sensor_energy'):
     B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).to(uti.device)
 
     return A, B, A, B  # for the moment same dataset for test and train
+
+
+################################################
+#       generate random correlated variables
+# x ... true energy
+# y ... deposited energy
+###############################################
+
+def generate_random_variables(corr=0., means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
+
+    cov = [[stds[0]**2, stds[0]*stds[1]*corr], [stds[0]*stds[1]*corr, stds[1]**2]]
+    A, B = np.random.multivariate_normal(means, cov, size=800).T
+    A = torch.from_numpy(A).to(uti.device)
+    B = torch.from_numpy(B).to(uti.device)
+
+    return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
