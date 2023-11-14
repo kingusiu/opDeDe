@@ -3,14 +3,15 @@ import pandas as pd
 import numpy as np
 import math
 from collections import namedtuple
+import argparse
 
 import torch, torchvision
-
 from torch import nn
 import torch.nn.functional as F
 
 import src.input_generator as inge
 import src.util as uti
+import src.string_constants as stco
 
 
 ##################################
@@ -130,14 +131,14 @@ def test(model, input_a, input_b, batch_size):
 
 if __name__ == '__main__':
 
-    samples_N = int(1e5)
+    parser = argparse.ArgumentParser(description='read arguments for k-fold QR training')
+    parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(1e5))
+    parser.add_argument('-in', dest='input_type', choices=['calo', 'sensor', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='random')
 
-    configs = {
-        'good calo': 'data/kinga2_t0.pkl',
-        'bad calo' : 'data/kinga2_badcalo_t0.pkl'
-    }
+    args = parser.parse_args()
 
-    for config_name, file_path in configs.items():
+
+    for config_name, file_path in stco.configs_calo.items():
 
         print(f'running train and test for {config_name}')
 
