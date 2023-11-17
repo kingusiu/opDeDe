@@ -4,6 +4,7 @@ import numpy as np
 import math
 from collections import namedtuple
 import argparse
+from sklearn import feature_selection
 
 import torch, torchvision
 from torch import nn
@@ -67,14 +68,11 @@ class MI_Model(nn.Module):
     def forward(self, a, b):
         a = self.features_a(a).view(a.size(0), -1)
         b = self.features_b(b).view(b.size(0), -1)
-        x = torch.cat((a, b), 1)
+        x = torch.cat((a, b), 1) # first dimension is batch-dimension
         return self.fully_connected(x)
 
 
-def train(model,input_a,input_b,batch_size,nb_epochs): 
-
-    entropy = 0 #compute_entropy(input_b) -> check how to compute entropy values for sanity check (not a binary array anymore)
-    print(f'Entropy : {entropy:.3f}')
+def train(model,input_a,input_b,batch_size,nb_epochs):
 
     train_mi = []
 
@@ -131,20 +129,27 @@ def test(model, input_a, input_b, batch_size):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='read arguments for k-fold QR training')
+    # cmd arguments: number and type of input samples
+
+    parser = argparse.ArgumentParser(description='read arguments for mutual information training and testing')
     parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(1e5))
     parser.add_argument('-in', dest='input_type', choices=['calo', 'sensor', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='random')
 
     args = parser.parse_args()
 
 
-    for config_name, file_path in stco.configs_calo.items():
+    config = {
+        'calo' : stco.configs_calo,
+        'random' : stco.configs_random        
+    }
+
+    for config_name, corr in config[args.input_type].items():
 
         print(f'running train and test for {config_name}')
 
         # create training and test inputs
-        A_train, B_train, A_test, B_test = inge.read_inputs_from_file(file_path, b_label='sensor_energy')
-        # A_train, B_train, A_test, B_test = inge.generate_inputs(samples_N=samples_N)
+        #A_train, B_train, A_test, B_test = inge.read_inputs_from_file(file_path, b_label='sensor_energy')
+        A_train, B_train, A_test, B_test = inge.generate_random_variables(N=args.N, corr=corr)
         B_N = B_train.size(1)
 
         # import ipdb; ipdb.set_trace()
@@ -159,11 +164,13 @@ if __name__ == '__main__':
 
         # train model
         train_acc_mi = train(model, A_train, B_train, batch_size, nb_epochs)
-        print(f'train {config_name}: {train_acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
+        train_true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1, 1), B_train.ravel())[0]
 
         # test model
         test_acc_mi = test(model, A_test, B_test, batch_size)
-        print(f'test {config_name}: {test_acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
+        test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1, 1), B_test.ravel())[0]
+
+        print(f'corr {corr:.01f}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})\n')
 
 
 

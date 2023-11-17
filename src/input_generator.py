@@ -2,6 +2,7 @@ import math
 import torch, torchvision
 import pandas as pd
 import numpy as np
+from scipy.stats import multivariate_normal
 
 import src.util as uti
 
@@ -92,9 +93,10 @@ def read_inputs_from_file(file_path, b_label='sensor_energy'):
 def generate_random_variables(N=int(1e5), corr=0., means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
 
     cov = [[stds[0]**2, stds[0]*stds[1]*corr], [stds[0]*stds[1]*corr, stds[1]**2]]
-    A, B = np.random.multivariate_normal(means, cov, size=N).T
-    A = torch.from_numpy(A).to(uti.device)
-    B = torch.from_numpy(B).to(uti.device)
+    normal = multivariate_normal(means, cov) 
+    A, B = normal.rvs(size=N).astype(np.float32).T
+    A = torch.from_numpy(A).unsqueeze(-1).to(uti.device)
+    B = torch.from_numpy(B).unsqueeze(-1).to(uti.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
