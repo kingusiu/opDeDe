@@ -72,16 +72,16 @@ def generate_sensor_inputs(samples_N=int(1e5)):
 # y ... deposited energy
 ##################################
 
-def read_inputs_from_file(file_path, b_label='sensor_energy'): 
+def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=None): 
 
     # import ipdb; ipdb.set_trace()
 
     df = pd.read_pickle(file_path)
 
     A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
-    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).to(uti.device)
+    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
 
-    return A, B, A, B  # for the moment same dataset for test and train
+    return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
 
 ################################################

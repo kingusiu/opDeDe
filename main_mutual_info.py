@@ -143,16 +143,18 @@ if __name__ == '__main__':
         'random' : stco.configs_random        
     }
 
-    for config_name, corr in config[args.input_type].items():
+    for config_name, params in config[args.input_type].items():
 
         print(f'running train and test for {config_name}')
 
         # create training and test inputs
-        #A_train, B_train, A_test, B_test = inge.read_inputs_from_file(file_path, b_label='sensor_energy')
-        A_train, B_train, A_test, B_test = inge.generate_random_variables(N=args.N, corr=corr)
+        if args.input_type == 'calo':
+            A_train, B_train, A_test, B_test = inge.read_inputs_from_file(params, b_label='total_dep_energy')
+        else:
+            A_train, B_train, A_test, B_test = inge.generate_random_variables(N=args.N, corr=params)
+        
         B_N = B_train.size(1)
 
-        # import ipdb; ipdb.set_trace()
 
         # runtime params
         batch_size = A_train.size(0) if A_train.size(0) < 256 else 256
@@ -162,6 +164,7 @@ if __name__ == '__main__':
         model = MI_Model(B_N=B_N)
         model.to(uti.device)
 
+        # import ipdb; ipdb.set_trace()
         # train model
         train_acc_mi = train(model, A_train, B_train, batch_size, nb_epochs)
         train_true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1, 1), B_train.ravel())[0]
@@ -170,7 +173,7 @@ if __name__ == '__main__':
         test_acc_mi = test(model, A_test, B_test, batch_size)
         test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1, 1), B_test.ravel())[0]
 
-        print(f'corr {corr:.01f}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})\n')
+        print(f'{config_name}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})\n')
 
 
 
