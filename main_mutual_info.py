@@ -2,6 +2,7 @@ import sys
 import pandas as pd
 import numpy as np
 import math
+import os
 from collections import namedtuple
 import argparse
 from sklearn import feature_selection
@@ -176,7 +177,7 @@ if __name__ == '__main__':
         test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1, 1), B_test.ravel())[0]
 
         #****************************************#
-        #               save results 
+        #               collect results 
         #****************************************#
 
         results.append([config_name, params, train_acc_mi, train_approx_mi, train_true_mi, test_acc_mi, test_approx_mi, test_true_mi])
@@ -195,7 +196,13 @@ if __name__ == '__main__':
         print(result_str + '\n')
 
 
-    
+    #****************************************#
+    #               save results 
+    #****************************************#
+
+    df = pd.DataFrame(results, columns=['name', 'corr', 'train ml mi', 'train appr mi', 'train true mi', 'test ml mi', 'test appr mi', 'test true mi' ])
+
+    df.to_pickle(os.path.join(stco.result_dir,'results.h5'))
 
 
 
