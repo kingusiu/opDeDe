@@ -13,31 +13,7 @@ import torch.nn.functional as F
 import src.input_generator as inge
 import src.util as uti
 import src.string_constants as stco
-
-
-##################################
-#               entropy
-##################################
-
-
-def compute_entropy(z):
-    # z = torch.randint(2, (10000,7))
-    assert tuple(z.unique()) == (0,1)
-    pow2=(2**torch.arange(z.size(1)))[None,:].to(z.device)
-    print(f'SANITY max {z.sum(1).max()}, min {z.sum(1).min()}')
-
-    c=0
-    for zz in z.split(1000):
-        n=(zz.long()*pow2).sum(1)
-        c+=torch.nn.functional.one_hot(n).sum(0)
-
-    # c=torch.nn.functional.one_hot(n).sum(0)
-    p=c/c.sum()
-    print(f'SANITY  p {p}')
-    h=-p.xlogy(p).sum() / math.log(2)
-
-    return h.item()
-
+import src.math_util as maut
 
 
 ##################################
@@ -126,10 +102,20 @@ def test(model, input_a, input_b, batch_size):
     return test_acc_mi
 
 
+def get_inputs(args, params):
+
+    # create training and test inputs
+    if args.input_type == 'calo':
+        return inge.read_inputs_from_file(params, b_label='total_dep_energy', train_test_split=None)
+    else:
+        return inge.generate_random_variables(N=args.N, corr=params)
+
 
 if __name__ == '__main__':
 
-    # cmd arguments: number and type of input samples
+    #*****************************************************#
+    #   cmd arguments: number and type of input samples
+    #*****************************************************#
 
     parser = argparse.ArgumentParser(description='read arguments for mutual information training and testing')
     parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(1e5))
@@ -143,18 +129,27 @@ if __name__ == '__main__':
         'random' : stco.configs_random        
     }
 
+    #*****************************************************#
+    #       approximate MI for each config instance
+    #*****************************************************#
+
+    result_ll = []
+
     for config_name, params in config[args.input_type].items():
 
         print(f'running train and test for {config_name}')
 
-        # create training and test inputs
-        if args.input_type == 'calo':
-            A_train, B_train, A_test, B_test = inge.read_inputs_from_file(params, b_label='total_dep_energy')
-        else:
-            A_train, B_train, A_test, B_test = inge.generate_random_variables(N=args.N, corr=params)
+        #****************************************#
+        #               load data 
+        #****************************************#
+
+        A_train, B_train, A_test, B_test = get_inputs(args, params)
         
         B_N = B_train.size(1)
 
+        #****************************************#
+        #               build model 
+        #****************************************#
 
         # runtime params
         batch_size = A_train.size(0) if A_train.size(0) < 256 else 256
@@ -164,19 +159,43 @@ if __name__ == '__main__':
         model = MI_Model(B_N=B_N)
         model.to(uti.device)
 
-        # import ipdb; ipdb.set_trace()
-        # train model
+        #****************************************#
+        #               train model 
+        #****************************************#
+
         train_acc_mi = train(model, A_train, B_train, batch_size, nb_epochs)
+        train_approx_mi = maut.mutual_info_from_xy(A_train,B_train)
         train_true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1, 1), B_train.ravel())[0]
 
-        # test model
+        #****************************************#
+        #               test model 
+        #****************************************#
+
         test_acc_mi = test(model, A_test, B_test, batch_size)
+        test_approx_mi = maut.mutual_info_from_xy(A_test,B_test)
         test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1, 1), B_test.ravel())[0]
 
-        print(f'{config_name}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})\n')
+        #****************************************#
+        #               save results 
+        #****************************************#
+
+        results.append([config_name, params, train_acc_mi, train_approx_mi, train_true_mi, test_acc_mi, test_approx_mi, test_true_mi])
+
+        #****************************************#
+        #               output results 
+        #****************************************#
+
+        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})' 
+
+        # import ipdb; ipdb.set_trace()
+        # add energy resolution
+        if args.input_type == 'calo':
+            result_str += f'\t energy res train {maut.energy_resolution(A_train.numpy(), B_train.numpy()):.02f} \t energy res test {maut.energy_resolution(A_test.numpy(), B_test.numpy()):.02f}'
+        
+        print(result_str + '\n')
 
 
-
+    
 
 
 

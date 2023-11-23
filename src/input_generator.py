@@ -68,8 +68,9 @@ def generate_sensor_inputs(samples_N=int(1e5)):
 
 ##################################
 #       read inputs from file
-# x ... true energy
+# file_path ... path to input pickle file
 # y ... deposited energy
+# train_test_split ... float indicating train share or None
 ##################################
 
 def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=None): 
@@ -77,6 +78,9 @@ def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=N
     # import ipdb; ipdb.set_trace()
 
     df = pd.read_pickle(file_path)
+
+    if train_test_split:
+        train_test_split = int(len(df)*train_test_split)
 
     A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
     B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
