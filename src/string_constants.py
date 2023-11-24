@@ -15,7 +15,7 @@ configs_calo_baby = {
         'bad calo' : 'data/testfile_t0.pkl'
     }
 
-configs_random = {f'corr {corr:.01f}': corr for corr in np.arange(0.,1.,0.1)}
+configs_random = {f'corr {corr:.02f}': corr for corr in np.arange(0.,1.05,0.05)}
 
 
 #****************************************#

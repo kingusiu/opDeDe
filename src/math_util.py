@@ -4,6 +4,8 @@ def entropy_from_probs(probs):
 	return -np.sum(probs * np.log(probs, out=np.zeros(probs.shape), where=(probs!=0))) / np.log(2)
 
 def mutual_info_from_xy(x,y,bins=10):
+	x = x.squeeze().numpy()
+	y = y.squeeze().numpy()
 	p_x, *_ = np.histogram(x,bins=bins,density=True) 
 	p_y, *_ = np.histogram(y,bins=bins,density=True) 
 	p_xy, *_ = np.histogram2d(x, y, bins=bins, density=True)

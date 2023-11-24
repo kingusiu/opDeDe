@@ -97,7 +97,7 @@ def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=N
 def generate_random_variables(N=int(1e5), corr=0., means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
 
     cov = [[stds[0]**2, stds[0]*stds[1]*corr], [stds[0]*stds[1]*corr, stds[1]**2]]
-    normal = multivariate_normal(means, cov) 
+    normal = multivariate_normal(means, cov, allow_singular=True) 
     A, B = normal.rvs(size=N).astype(np.float32).T
     A = torch.from_numpy(A).unsqueeze(-1).to(uti.device)
     B = torch.from_numpy(B).unsqueeze(-1).to(uti.device)

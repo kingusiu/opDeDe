@@ -135,6 +135,7 @@ if __name__ == '__main__':
     #*****************************************************#
 
     result_ll = []
+    columns = ['name', 'corr', 'train ml mi', 'train appr mi', 'train true mi', 'test ml mi', 'test appr mi', 'test true mi'] + (['train E res', 'test E res'] if args.input_type == 'calo' else [])
 
     for config_name, params in config[args.input_type].items():
 
@@ -165,6 +166,7 @@ if __name__ == '__main__':
         #****************************************#
 
         train_acc_mi = train(model, A_train, B_train, batch_size, nb_epochs)
+        # import ipdb; ipdb.set_trace()
         train_approx_mi = maut.mutual_info_from_xy(A_train,B_train)
         train_true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1, 1), B_train.ravel())[0]
 
@@ -180,18 +182,21 @@ if __name__ == '__main__':
         #               collect results 
         #****************************************#
 
-        results.append([config_name, params, train_acc_mi, train_approx_mi, train_true_mi, test_acc_mi, test_approx_mi, test_true_mi])
+        result_ll.append([config_name, params, train_acc_mi, train_approx_mi, train_true_mi, test_acc_mi, test_approx_mi, test_true_mi])
 
         #****************************************#
         #               output results 
         #****************************************#
 
-        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f} (true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (true {test_true_mi:.04f})' 
+        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f} (approx {train_approx_mi:.04f}, true {train_true_mi:.04f}) \t test MI train MI {test_acc_mi:.04f} (approx {test_approx_mi:.04f}, true {test_true_mi:.04f})' 
 
         # import ipdb; ipdb.set_trace()
         # add energy resolution
         if args.input_type == 'calo':
-            result_str += f'\t energy res train {maut.energy_resolution(A_train.numpy(), B_train.numpy()):.02f} \t energy res test {maut.energy_resolution(A_test.numpy(), B_test.numpy()):.02f}'
+            train_e_res = maut.energy_resolution(A_train.numpy(), B_train.numpy())
+            test_e_res = maut.energy_resolution(A_test.numpy(), B_test.numpy())
+            result_str += f'\t energy res train {train_e_res:.02f} \t energy res test {test_e_res:.02f}'
+            results[-1] += [train_e_res, test_e_res]
         
         print(result_str + '\n')
 
@@ -200,9 +205,9 @@ if __name__ == '__main__':
     #               save results 
     #****************************************#
 
-    df = pd.DataFrame(results, columns=['name', 'corr', 'train ml mi', 'train appr mi', 'train true mi', 'test ml mi', 'test appr mi', 'test true mi' ])
+    df = pd.DataFrame(result_ll, columns=columns)
 
-    df.to_pickle(os.path.join(stco.result_dir,'results.h5'))
+    df.to_pickle(os.path.join(stco.result_dir,'results'+args.input_type+'.h5'))
 
 
 
