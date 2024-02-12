@@ -4,8 +4,8 @@ def entropy_from_probs(probs):
 	return -np.sum(probs * np.log(probs, out=np.zeros(probs.shape), where=(probs!=0))) / np.log(2)
 
 def mutual_info_from_xy(x,y,bins=10):
-	x = x.squeeze().numpy()
-	y = y.squeeze().numpy()
+	x = x.squeeze().cpu().numpy()
+	y = y.squeeze().cpu().numpy()
 	p_x, *_ = np.histogram(x,bins=bins,density=True) 
 	p_y, *_ = np.histogram(y,bins=bins,density=True) 
 	p_xy, *_ = np.histogram2d(x, y, bins=bins, density=True)
@@ -18,5 +18,5 @@ def energy_resolution(e_true, e_depo):
 	e_depo = np.sum(e_depo,axis=1).squeeze()
 	# return mean of ratio divided by standard deviation of ratio
 	ratio = e_depo / e_true.squeeze()
-	return np.mean(ratio) / np.std(ratio)
+	return np.std(ratio) / np.mean(ratio) # check if std mean corrected
 

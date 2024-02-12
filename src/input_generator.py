@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import multivariate_normal
 
-import src.util as uti
+import src.util.runtime_util as rtut
 
 ##############################################
 #       generate toy sensor inputs
@@ -54,7 +54,7 @@ def generate_sensor_responses(
     valid = (((x*beta.cos() + y*beta.sin()) / torch.sqrt(x**2 + y**2)) >= 0)
     z = z * valid
 
-    return alpha.unsqueeze(-1).to(uti.device), z.to(uti.device)
+    return alpha.unsqueeze(-1).to(rtut.device), z.to(rtut.device)
 
 
 def generate_sensor_inputs(samples_N=int(1e5)):
@@ -66,6 +66,12 @@ def generate_sensor_inputs(samples_N=int(1e5)):
     return alpha_train, hits_train, alpha_test, hits_test
 
 
+def calc_train_test_split_N(N,train_test_split_share):
+    if train_test_split_share:
+        return int(N*train_test_split_share)
+    return None
+
+
 ##################################
 #       read inputs from file
 # file_path ... path to input pickle file
@@ -73,19 +79,49 @@ def generate_sensor_inputs(samples_N=int(1e5)):
 # train_test_split ... float indicating train share or None
 ##################################
 
-def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=None): 
+def read_inputs_from_df(df, b_label='sensor_energy', train_test_split=None): 
 
     # import ipdb; ipdb.set_trace()
 
-    df = pd.read_pickle(file_path)
+    train_test_split = calc_train_test_split_N(len(df),train_test_split)
 
-    if train_test_split:
-        train_test_split = int(len(df)*train_test_split)
-
-    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
-    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(uti.device)
+    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
+
+# A in R^1, B in R^1 (energy sum)
+def read_multilayer_calo_file_summed_E(file_path):
+
+    df = pd.read_pickle(file_path)
+
+    N_layers = 30
+    sums = np.asarray([[sum(x[:i]) for x in df['sensor_energy']] for i in range(1,N_layers+1)])
+    sum_col_names = [f'sum_{i}L' for i in range(1,N_layers+1)] 
+    df[sum_col_names] = sums.T
+
+    return df
+
+
+# A in R^1, B in R^num_layers
+def read_multilayer_calo_file_E_per_layer(file_path):
+
+    df = pd.read_pickle(file_path)
+
+    N_layers = 30
+    col_names = [f'E_{i}L{i}' for i in range(1,N_layers+1)]
+    df[col_names] = ff['sensor_energy'].to_list() 
+
+    return df
+
+
+def read_multilayer_calo_data_for_k_layers(df, k, train_test_split=None):
+
+    train_test_split = calc_train_test_split_N(len(df),train_test_split)
+
+    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(df[f'sum_{k}L'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
+
 
 
 ################################################
@@ -96,11 +132,13 @@ def read_inputs_from_file(file_path, b_label='sensor_energy', train_test_split=N
 
 def generate_random_variables(N=int(1e5), corr=0., means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
 
+    train_test_split = calc_train_test_split_N(N,train_test_split)
+
     cov = [[stds[0]**2, stds[0]*stds[1]*corr], [stds[0]*stds[1]*corr, stds[1]**2]]
     normal = multivariate_normal(means, cov, allow_singular=True) 
     A, B = normal.rvs(size=N).astype(np.float32).T
-    A = torch.from_numpy(A).unsqueeze(-1).to(uti.device)
-    B = torch.from_numpy(B).unsqueeze(-1).to(uti.device)
+    A = torch.from_numpy(A).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(B).unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 

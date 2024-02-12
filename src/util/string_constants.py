@@ -1,7 +1,6 @@
 import os
 import numpy as np
 
-
 #****************************************#
 #               configs 
 #****************************************#
@@ -16,8 +15,6 @@ configs_calo_baby = {
         'bad calo' : 'data/testfile_t0.pkl'
     }
 
-configs_layer = {f'{i} layers':i for i in range(1,30)}
-
 configs_random = {f'corr {corr:.02f}': corr for corr in np.arange(0.,1.05,0.05)}
 
 
@@ -25,6 +22,5 @@ configs_random = {f'corr {corr:.02f}': corr for corr in np.arange(0.,1.05,0.05)}
 #               paths 
 #****************************************#
 
-input_dir = '/eos/home-k/kiwoznia/data/rodem/opde'
 result_dir = 'results'
 
