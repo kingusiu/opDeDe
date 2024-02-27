@@ -51,6 +51,8 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
 
         acc_mi = 0.0
 
+        # import ipdb; ipdb.set_trace()
+
         for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
                                             input_b.split(batch_size),
                                             input_br.split(batch_size)):

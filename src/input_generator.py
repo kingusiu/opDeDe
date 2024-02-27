@@ -2,6 +2,7 @@ import math
 import torch, torchvision
 import pandas as pd
 import numpy as np
+import scipy.stats
 from scipy.stats import multivariate_normal
 
 import src.util.runtime_util as rtut
@@ -86,42 +87,36 @@ def read_inputs_from_df(df, b_label='sensor_energy', train_test_split=None):
     train_test_split = calc_train_test_split_N(len(df),train_test_split)
 
     A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
-    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32))
+    B = B.to(rtut.device) if type(b_label) is list else B.unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
 # A in R^1, B in R^1 (energy sum)
-def read_multilayer_calo_file_summed_E(file_path):
+def read_multilayer_calo_file_summed_E(file_path,N_layers=30):
 
     df = pd.read_pickle(file_path)
+    df = df[['true_energy','total_dep_energy','sensor_energy']]
 
-    N_layers = 30
     sums = np.asarray([[sum(x[:i]) for x in df['sensor_energy']] for i in range(1,N_layers+1)])
     sum_col_names = [f'sum_{i}L' for i in range(1,N_layers+1)] 
     df[sum_col_names] = sums.T
+    df.drop(['sensor_energy'],axis=1)
 
     return df
 
 
 # A in R^1, B in R^num_layers
-def read_multilayer_calo_file_E_per_layer(file_path):
+def read_multilayer_calo_file_E_per_layer(file_path,N_layers=30):
 
     df = pd.read_pickle(file_path)
+    df = df[['true_energy','total_dep_energy','sensor_energy']]
 
-    N_layers = 30
-    col_names = [f'E_{i}L{i}' for i in range(1,N_layers+1)]
-    df[col_names] = ff['sensor_energy'].to_list() 
+    col_names = [f'E_L{i}' for i in range(1,N_layers+1)]
+    df[col_names] = df['sensor_energy'].to_list()
+    df.drop(['sensor_energy'],axis=1) 
 
     return df
-
-
-def read_multilayer_calo_data_for_k_layers(df, k, train_test_split=None):
-
-    train_test_split = calc_train_test_split_N(len(df),train_test_split)
-
-    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
-    B = torch.from_numpy(df[f'sum_{k}L'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
-
 
 
 ################################################
@@ -130,7 +125,7 @@ def read_multilayer_calo_data_for_k_layers(df, k, train_test_split=None):
 # y ... deposited energy
 ###############################################
 
-def generate_random_variables(N=int(1e5), corr=0., means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
+def generate_random_variables(corr=0., N=int(1e5), means=[0.0, 0.0], stds=[1.0, 1.0], train_test_split=None):
 
     train_test_split = calc_train_test_split_N(N,train_test_split)
 
@@ -142,3 +137,43 @@ def generate_random_variables(N=int(1e5), corr=0., means=[0.0, 0.0], stds=[1.0, 
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
+
+
+###############################################################
+#       generate random bi-modal gaussian mixture variables
+# x ... true energy
+# y ... deposited energy
+##############################################################
+
+def samples_from_multivariate_multimodal_gaussian(mus: list | np.ndarray, covs: list | np.ndarray, N_samples: int = 100) -> np.ndarray:
+
+    # set up distribution
+
+    N_dims = len(mus[0])
+    N_modes = len(mus)
+
+    mixtures = [scipy.stats.multivariate_normal(mus[i], covs[i]) for i in range(N_modes)]
+
+    # generate samples
+
+    pick_mode = np.random.choice(N_modes, N_samples)
+    N_samples_per_mode = [sum(pick_mode == i) for i in range(N_modes)]
+
+    samples_per_mode = [mixtures[i].rvs(N_samples_per_mode[i]) for i in range(N_modes)]
+    samples = np.concatenate(samples_per_mode)
+    np.random.shuffle(samples)
+
+    return samples
+
+
+def generate_bimodal_gauss_mixture_samples(mus, N=int(1e5), train_test_split=None):
+
+    train_test_split = calc_train_test_split_N(N,train_test_split)
+
+    covs = [np.eye(2)]*3
+    samples = samples_from_multivariate_multimodal_gaussian(mus, covs, N)
+    A, B = samples[:,0].astype(np.float32), samples[:,1].astype(np.float32)
+    A = torch.from_numpy(A).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(B).unsqueeze(-1).to(rtut.device)
+
+    return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
