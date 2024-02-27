@@ -80,17 +80,26 @@ def calc_train_test_split_N(N,train_test_split_share):
 # train_test_split ... float indicating train share or None
 ##################################
 
-def read_inputs_from_df(df, b_label='sensor_energy', train_test_split=None): 
+def read_inputs_from_df(df, a_label='true_energy', b_label='sensor_energy', train_test_split=None): 
 
     # import ipdb; ipdb.set_trace()
 
     train_test_split = calc_train_test_split_N(len(df),train_test_split)
 
-    A = torch.from_numpy(df['true_energy'].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
+    A = torch.from_numpy(df[a_label].to_numpy(dtype=np.float32)).unsqueeze(-1).to(rtut.device)
     B = torch.from_numpy(df[b_label].to_numpy(dtype=np.float32))
     B = B.to(rtut.device) if type(b_label) is list else B.unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
+
+def add_cumul_sum_layers(df,N_layers):
+
+    sums = np.asarray([[sum(x[:i]) for x in df['sensor_energy']] for i in range(1,N_layers+1)])
+    sum_col_names = [f'sum_{i}L' for i in range(1,N_layers+1)] 
+    df[sum_col_names] = sums.T
+
+    return df
+
 
 # A in R^1, B in R^1 (energy sum)
 def read_multilayer_calo_file_summed_E(file_path,N_layers=30):
@@ -98,9 +107,7 @@ def read_multilayer_calo_file_summed_E(file_path,N_layers=30):
     df = pd.read_pickle(file_path)
     df = df[['true_energy','total_dep_energy','sensor_energy']]
 
-    sums = np.asarray([[sum(x[:i]) for x in df['sensor_energy']] for i in range(1,N_layers+1)])
-    sum_col_names = [f'sum_{i}L' for i in range(1,N_layers+1)] 
-    df[sum_col_names] = sums.T
+    df = add_cumul_sum_layers(df,N_layers)
     df.drop(['sensor_energy'],axis=1)
 
     return df
@@ -115,6 +122,28 @@ def read_multilayer_calo_file_E_per_layer(file_path,N_layers=30):
     col_names = [f'E_L{i}' for i in range(1,N_layers+1)]
     df[col_names] = df['sensor_energy'].to_list()
     df.drop(['sensor_energy'],axis=1) 
+
+    return df
+
+
+def read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=30, sum_layers=True):
+
+    df_photons = pd.read_pickle(file_path_photons)
+    df_hadrons = pd.read_pickle(file_path_hadrons)
+
+    df_photons.drop(['sensor_x', 'sensor_y', 'sensor_z','sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
+    df_hadrons.drop(['sensor_x', 'sensor_y', 'sensor_z','sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
+
+    df_photons['pid'] = 0
+    df_hadrons['pid'] = 1
+
+    df_all = pd.concat([df_photons, df_hadrons], ignore_index=True)
+
+    if sum_layers == True:
+        df = add_cumul_sum_layers(df_all,N_layers)
+
+    # shuffle
+    df = df.sample(frac = 1)
 
     return df
 
