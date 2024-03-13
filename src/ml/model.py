@@ -37,9 +37,15 @@ class MI_Model(nn.Module):
         return self.fully_connected(x)
 
 
+def mutual_info(model, batch_a, batch_b, batch_br):
+
+    eps = 1e-10
+
+    return model(batch_a, batch_b).mean() - torch.log(model(batch_a, batch_br).exp().mean()+eps)
+
+
 def train(model,input_a,input_b,batch_size,nb_epochs):
 
-    eps = 1e-8
 
     train_mi = []
 
@@ -58,7 +64,8 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
         for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
                                             input_b.split(batch_size),
                                             input_br.split(batch_size)):
-            mi = model(batch_a, batch_b).mean() - torch.log(model(batch_a, batch_br).exp().mean()+eps)
+
+            mi = mutual_info(model, batch_a, batch_b, batch_br)
             acc_mi += mi.item()
             loss = - mi
             optimizer.zero_grad()
@@ -86,7 +93,8 @@ def test(model, input_a, input_b, batch_size):
     for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
                                         input_b.split(batch_size),
                                         input_br.split(batch_size)):
-        mi = model(batch_a, batch_b).mean() - model(batch_a, batch_br).exp().mean().log()
+
+        mi = mutual_info(model, batch_a, batch_b, batch_br)
         test_acc_mi += mi.item()
 
     test_acc_mi /= (input_a.size(0) // batch_size)

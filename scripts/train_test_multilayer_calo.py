@@ -23,6 +23,7 @@ if __name__ == '__main__':
     #*****************************************************#
 
     parser = argparse.ArgumentParser(description='read arguments for mutual information training and testing')
+    parser.add_argument('-r', dest='run_n', type=int, help='experiment run number', default=1)
     parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(5e5))
     parser.add_argument('-in', dest='input_type', choices=['calo', 'layer_multi', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='layer_multi')
 
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     #****************************************#
 
     datestr = datetime.datetime.now().strftime('_%Y%m%d')
-    result_path = os.path.join(stco.result_dir,'results_'+args.input_type+datestr+'.pkl')
+    result_path = os.path.join(stco.result_dir,'results_MI'+str(run_n)+'_'+args.input_type+datestr+'.pkl')
     print(f'saving results to {result_path}')
 
     df = pd.DataFrame(result_ll, columns=columns)

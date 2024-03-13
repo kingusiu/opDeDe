@@ -24,6 +24,7 @@ if __name__ == '__main__':
     #*****************************************************#
 
     parser = argparse.ArgumentParser(description='read arguments for mutual information training and testing')
+    parser.add_argument('-r', dest='run_n', type=int, help='experiment run number', default=1)
     parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(5e5))
     parser.add_argument('-in', dest='input_type', choices=['calo', 'pid_sum', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='pid_sum')
 
@@ -76,9 +77,9 @@ if __name__ == '__main__':
         #****************************************#
 
         # runtime params
-        batch_size_min = 1024
+        batch_size_min = 512
         batch_size = A_train.size(0) if A_train.size(0) < batch_size_min else batch_size_min
-        nb_epochs = 150
+        nb_epochs = 100
 
         # create model
         model = modl.MI_Model(B_N=B_N)
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     #****************************************#
 
     datestr = datetime.datetime.now().strftime('_%Y%m%d')
-    result_path = os.path.join(stco.result_dir,'results_'+args.input_type+datestr+'.pkl')
+    result_path = os.path.join(stco.result_dir,'results_MI'+str(run_n)+'_'+args.input_type+datestr+'.pkl')
     print(f'saving results to {result_path}')
 
     df = pd.DataFrame(result_ll, columns=columns)
