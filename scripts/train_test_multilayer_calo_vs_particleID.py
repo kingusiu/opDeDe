@@ -8,7 +8,6 @@ import os
 from collections import namedtuple
 import argparse
 from sklearn import feature_selection
-from sklearn import preprocessing
 
 import src.input_generator as inge
 import src.util.runtime_util as rtut
@@ -25,14 +24,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='read arguments for mutual information training and testing')
     parser.add_argument('-n', dest='N', type=int, help='number of samples', default=int(5e5))
-    parser.add_argument('-in', dest='input_type', choices=['calo', 'pid_sum', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='pid_sum')
+    parser.add_argument('-in', dest='input_type', choices=['calo', 'pid_multi', 'random'], help='type of inputs: calorimeter read from file, toy sensors or random variables', default='pid_multi')
 
     args = parser.parse_args()
 
 
     config = {
         'calo' : stco.configs_calo,
-        'pid_sum' : stco.configs_layer_sum,
+        'pid_multi' : stco.configs_layer_multi,
         'random' : stco.configs_random        
     }
 
@@ -41,21 +40,20 @@ if __name__ == '__main__':
     #*****************************************************#
 
     result_ll = []
-    columns = ['name', 'train ml mi', 'train appr mi', 'train true mi', 'test ml mi', 'test appr mi', 'test true mi']
+    columns = ['name', 'train ml mi', 'train true mi', 'test ml mi', 'test true mi']
     file_path_hadrons = '/eos/home-k/kiwoznia/data/rodem/opde/Feb24.pkl'
     file_path_photons = '/eos/home-k/kiwoznia/data/rodem/opde/Feb24_photons.pkl' 
 
     # read dataframe with all layer energy running sums once
-    df = inge.read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=30, sum_layers=True)
+    df = inge.read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=30, sum_layers=False)
     print(f'{len(df)} samples read')
 
-    # normalize all energies (colum wise standard scale)
-    #import ipdb; ipdb.set_trace()
+    # min-max scale
     df_pid = df['pid']
     range_min, range_max = 1., 5.
-    df = (df-df.min())/(df.max()-df.min()) * (range_max - range_min) + range_min
+    df_min, df_max = df.min(), df.max()
+    df = (df-df_min)/(df_max-df_min) * (range_max - range_min) + range_min
     df['pid'] = df_pid # reset the last column / not normalized
-    # df = pd.DataFrame(preprocessing.StandardScaler().fit_transform(df.values), columns=df.columns)
 
     for config_name, params in config[args.input_type].items():
 
@@ -76,9 +74,9 @@ if __name__ == '__main__':
         #****************************************#
 
         # runtime params
-        batch_size_min = 1024
+        batch_size_min = 512
         batch_size = A_train.size(0) if A_train.size(0) < batch_size_min else batch_size_min
-        nb_epochs = 150
+        nb_epochs = 100
 
         # create model
         model = modl.MI_Model(B_N=B_N)
@@ -89,28 +87,27 @@ if __name__ == '__main__':
         #****************************************#
 
         train_acc_mi = modl.train(model, A_train, B_train, batch_size, nb_epochs)
-        train_approx_mi = maut.mutual_info_from_xy(A_train,B_train)
-        train_true_mi = feature_selection.mutual_info_regression(A_train.cpu().reshape(-1, 1), B_train.cpu().ravel())[0]
+        # import ipdb; ipdb.set_trace()
+        train_true_mi = feature_selection.mutual_info_regression(B_train.cpu(), A_train.cpu().ravel())[0]
 
         #****************************************#
         #               test model 
         #****************************************#
 
         test_acc_mi = modl.test(model, A_test, B_test, batch_size)
-        test_approx_mi = maut.mutual_info_from_xy(A_test,B_test)
-        test_true_mi = feature_selection.mutual_info_regression(A_test.cpu().reshape(-1, 1), B_test.cpu().ravel())[0]
+        test_true_mi = feature_selection.mutual_info_regression(B_train.cpu(), A_train.cpu().ravel())[0]
 
         #****************************************#
         #               collect results 
         #****************************************#
 
-        result_ll.append([config_name, train_acc_mi, train_approx_mi, train_true_mi, test_acc_mi, test_approx_mi, test_true_mi])
+        result_ll.append([config_name, train_acc_mi, train_true_mi, test_acc_mi, test_true_mi])
 
         #****************************************#
-        #               output results 
+        #               output results
         #****************************************#
 
-        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f} (approx {train_approx_mi:.04f}, true {train_true_mi:.04f}) \t test MI {test_acc_mi:.04f} (approx {test_approx_mi:.04f}, true {test_true_mi:.04f})\n' 
+        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f}, true {train_true_mi:.04f}) \t test MI {test_acc_mi:.04f}, true {test_true_mi:.04f})\n'
 
 
     #****************************************#

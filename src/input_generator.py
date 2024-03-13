@@ -112,6 +112,13 @@ def read_multilayer_calo_file_summed_E(file_path,N_layers=30):
 
     return df
 
+def add_per_layer_E_columns(df,N_layers):
+
+    col_names = [f'E_L{i}' for i in range(1,N_layers+1)]
+    df[col_names] = df['sensor_energy'].to_list()
+    
+    return df
+
 
 # A in R^1, B in R^num_layers
 def read_multilayer_calo_file_E_per_layer(file_path,N_layers=30):
@@ -119,8 +126,7 @@ def read_multilayer_calo_file_E_per_layer(file_path,N_layers=30):
     df = pd.read_pickle(file_path)
     df = df[['true_energy','total_dep_energy','sensor_energy']]
 
-    col_names = [f'E_L{i}' for i in range(1,N_layers+1)]
-    df[col_names] = df['sensor_energy'].to_list()
+    df = add_per_layer_E_columns(df, N_layers)
     df.drop(['sensor_energy'],axis=1) 
 
     return df
@@ -131,8 +137,8 @@ def read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=
     df_photons = pd.read_pickle(file_path_photons)
     df_hadrons = pd.read_pickle(file_path_hadrons)
 
-    df_photons.drop(['sensor_x', 'sensor_y', 'sensor_z','sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
-    df_hadrons.drop(['sensor_x', 'sensor_y', 'sensor_z','sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
+    df_photons.drop(['sensor_x', 'sensor_y', 'sensor_z', 'sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
+    df_hadrons.drop(['sensor_x', 'sensor_y', 'sensor_z', 'sensor_dx', 'sensor_dy', 'sensor_dz','sensor_copy_number'],axis=1)
 
     df_photons['pid'] = 0
     df_hadrons['pid'] = 1
@@ -141,6 +147,8 @@ def read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=
 
     if sum_layers == True:
         df = add_cumul_sum_layers(df_all,N_layers)
+    else:
+        df = add_per_layer_E_columns(df_all,N_layers)
 
     # shuffle
     df = df.sample(frac = 1)

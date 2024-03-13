@@ -39,6 +39,8 @@ class MI_Model(nn.Module):
 
 def train(model,input_a,input_b,batch_size,nb_epochs):
 
+    eps = 1e-8
+
     train_mi = []
 
     learning_rate = 1e-3
@@ -56,7 +58,7 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
         for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
                                             input_b.split(batch_size),
                                             input_br.split(batch_size)):
-            mi = model(batch_a, batch_b).mean() - model(batch_a, batch_br).exp().mean().log()
+            mi = model(batch_a, batch_b).mean() - torch.log(model(batch_a, batch_br).exp().mean()+eps)
             acc_mi += mi.item()
             loss = - mi
             optimizer.zero_grad()
