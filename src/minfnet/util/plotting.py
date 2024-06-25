@@ -5,9 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-import src.util as uti
-import src.input_generator as inge
-import src.util.string_constants as stco
+from minfnet.dats import input_generator as inge
+from minfnet.util import string_constants as stco
 
 
 class Animator():

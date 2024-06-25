@@ -6,11 +6,11 @@ from collections import namedtuple
 import argparse
 from sklearn import feature_selection
 
-import src.input_generator as inge
-import src.util as uti
-import src.string_constants as stco
-import src.math_util as maut
-import src.ml.model as modl
+from minfnet.dats import input_generator as inge
+from minfnet.util import runtime_util as ruti
+from minfnet.util string_constants as stco
+from minfnet.util import math_util as maut
+from minfnet.ml import model as modl
 
 
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
         # create model
         model = modl.MI_Model(B_N=B_N)
-        model.to(uti.device)
+        model.to(ruti.device)
 
         #****************************************#
         #               train model 

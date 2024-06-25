@@ -5,7 +5,8 @@ import numpy as np
 import scipy.stats
 from scipy.stats import multivariate_normal
 
-import src.util.runtime_util as rtut
+from minfnet.util import runtime_util as rut
+# import src.util.runtime_util as rtut
 
 ##############################################
 #       generate toy sensor inputs
@@ -73,13 +74,13 @@ def calc_train_test_split_N(N,train_test_split_share):
     return None
 
 
-##################################
-#       read inputs from df
-# df        ... dataframe with random variables A (R1) and B (RN, N=1..M)
-# a_label   ... label of variable A in df
-# b_label
-# train_test_split ... float indicating train share or None
-##################################
+###########################################
+#           read inputs from df
+#   df                  ... dataframe with random variables A (R1) and B (RN, N=1..M)
+#   a_label             ... label of variable A in df
+#   b_label             ... label of variable B in df
+#   train_test_split    ... float indicating train share or None, if None: train-sample == test-sample
+###########################################
 
 def read_inputs_from_df(df, a_label='true_energy', b_label='sensor_energy', train_test_split=None): 
 

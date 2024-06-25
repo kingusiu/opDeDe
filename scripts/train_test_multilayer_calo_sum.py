@@ -124,7 +124,7 @@ if __name__ == '__main__':
     #****************************************#
 
     datestr = datetime.datetime.now().strftime('_%Y%m%d')
-    result_path = os.path.join(stco.result_dir,'results_MI'+str(run_n)+'_'+args.input_type+datestr+'.pkl')
+    result_path = os.path.join(stco.result_dir,'results_MI'+str(args.run_n)+'_'+args.input_type+datestr+'.pkl')
     print(f'saving results to {result_path}')
 
     df = pd.DataFrame(result_ll, columns=columns)

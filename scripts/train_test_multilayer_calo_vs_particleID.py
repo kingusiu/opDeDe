@@ -8,12 +8,14 @@ import os
 from collections import namedtuple
 import argparse
 from sklearn import feature_selection
+import wandb
 
 import src.input_generator as inge
 import src.util.runtime_util as rtut
 import src.util.string_constants as stco
 import src.util.math_util as maut
 import src.ml.model as modl
+import src.ml.train_n_test as trte
 
 
 if __name__ == '__main__':
@@ -30,10 +32,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-    config = {
+    run_config = {
         'calo' : stco.configs_calo,
         'pid_multi' : stco.configs_layer_multi,
         'random' : stco.configs_random        
+    }
+
+    #*****************************************************#
+    # initialize wandb
+    wandb.login()
+    exp_conf = {
+        'N' : int(5e5),
+        'dat': 'pid_multi',
+        'eps': 1e-7,
+        'lr' : 1e-3,
+        'batch_sz' : 512,
+        'epochs' : 100,
     }
 
     #*****************************************************#
@@ -56,67 +70,25 @@ if __name__ == '__main__':
     df = (df-df_min)/(df_max-df_min) * (range_max - range_min) + range_min
     df['pid'] = df_pid # reset the last column / not normalized
 
-    for config_name, params in config[args.input_type].items():
+    # outer wandb logging loop
+    with wandb.init(project='mi4opde_'+str(args.run_n), config=exp_conf):
 
-        print(f'running train and test for {config_name}')
+        for design_i, (design_name, params) in enumerate(run_config[args.input_type].items()):
 
-        #****************************************#
-        #               load data 
-        #****************************************#
+            print(f'running train and test for {design_name}')
 
-        A_train, B_train, A_test, B_test = inge.read_inputs_from_df(df, a_label='pid', b_label=params, train_test_split=0.5)
-
-        # import ipdb; ipdb.set_trace()
+            results = trte.run_experiment_per_detector_design_multiB(exp_conf,params,df,args.run_n,design_name)
+            result_ll.append(results)
+            wandb.log({"config_name":results[0], "train_acc_mi":results[1], "train_true_mi":results[2], "test_acc_mi":results[3], "test_true_mi":results[4]})
         
-        B_N = B_train.size(1)
-
-        #****************************************#
-        #               build model 
-        #****************************************#
-
-        # runtime params
-        batch_size_min = 512
-        batch_size = A_train.size(0) if A_train.size(0) < batch_size_min else batch_size_min
-        nb_epochs = 100
-
-        # create model
-        model = modl.MI_Model(B_N=B_N)
-        model.to(rtut.device)
-
-        #****************************************#
-        #               train model 
-        #****************************************#
-
-        train_acc_mi = modl.train(model, A_train, B_train, batch_size, nb_epochs)
-        # import ipdb; ipdb.set_trace()
-        train_true_mi = feature_selection.mutual_info_regression(B_train.cpu(), A_train.cpu().ravel())[0]
-
-        #****************************************#
-        #               test model 
-        #****************************************#
-
-        test_acc_mi = modl.test(model, A_test, B_test, batch_size)
-        test_true_mi = feature_selection.mutual_info_regression(B_train.cpu(), A_train.cpu().ravel())[0]
-
-        #****************************************#
-        #               collect results 
-        #****************************************#
-
-        result_ll.append([config_name, train_acc_mi, train_true_mi, test_acc_mi, test_true_mi])
-
-        #****************************************#
-        #               output results
-        #****************************************#
-
-        result_str = f'{config_name}: \t train MI {train_acc_mi:.04f}, true {train_true_mi:.04f}) \t test MI {test_acc_mi:.04f}, true {test_true_mi:.04f})\n'
-
-
+        # result_str = f'{design_name}: \t train MI {results[0]:.04f}, true {results[1]:.04f}) \t test MI {results[2]:.04f}, true {results[6]:.04f})\n'
+        
     #****************************************#
     #               save results 
     #****************************************#
 
     datestr = datetime.datetime.now().strftime('_%Y%m%d')
-    result_path = os.path.join(stco.result_dir,'results_MI'+str(run_n)+'_'+args.input_type+datestr+'.pkl')
+    result_path = os.path.join(stco.result_dir,'results_MI'+str(args.run_n)+'_'+args.input_type+datestr+'.pkl')
     print(f'saving results to {result_path}')
 
     df = pd.DataFrame(result_ll, columns=columns)

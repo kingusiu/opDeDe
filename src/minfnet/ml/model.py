@@ -3,6 +3,7 @@ import sys
 import torch, torchvision
 from torch import nn
 import torch.nn.functional as F
+import wandb
 
 
 ##################################
@@ -37,23 +38,22 @@ class MI_Model(nn.Module):
         return self.fully_connected(x)
 
 
-def mutual_info(model, batch_a, batch_b, batch_br):
-
-    eps = 1e-10
+def mutual_info(model, batch_a, batch_b, batch_br, eps=1e-8):
 
     return model(batch_a, batch_b).mean() - torch.log(model(batch_a, batch_br).exp().mean()+eps)
 
 
-def train(model,input_a,input_b,batch_size,nb_epochs):
+def train(model,input_a,input_b,batch_size,nb_epochs,lr=1e-3,eps=1e-8):
 
+    wandb.watch(model, mutual_info, log="all", log_freq=10)
 
     train_mi = []
 
-    learning_rate = 1e-3
-
+    b_c = 0
+    
     for e in range(nb_epochs):
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
         input_br = input_b[torch.randperm(input_b.size(0))]
 
@@ -61,19 +61,25 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
 
         # import ipdb; ipdb.set_trace()
 
-        for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
+        for b_i, (batch_a, batch_b, batch_br) in enumerate(zip(input_a.split(batch_size),
                                             input_b.split(batch_size),
-                                            input_br.split(batch_size)):
+                                            input_br.split(batch_size))):
 
-            mi = mutual_info(model, batch_a, batch_b, batch_br)
+            mi = mutual_info(model, batch_a, batch_b, batch_br,eps)
             acc_mi += mi.item()
             loss = - mi
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        acc_mi /= (input_a.size(0) // batch_size)
+            if ((b_i + 1) % 30) == 0:
+                b_c += b_i
+                wandb.log({"epoch": e, "loss": loss}, step=b_c)
+
+        acc_mi /= (input_a.size(0) // batch_size) # mi per batch
         acc_mi /= math.log(2)
+
+        wandb.log({"epoch": e, "mi": acc_mi})
 
         train_mi.append(acc_mi)
 
@@ -84,7 +90,7 @@ def train(model,input_a,input_b,batch_size,nb_epochs):
     return acc_mi
 
 
-def test(model, input_a, input_b, batch_size):
+def test(model, input_a, input_b, batch_size,eps=1e-8):
 
     input_br = input_b[torch.randperm(input_b.size(0))]
 
@@ -94,10 +100,12 @@ def test(model, input_a, input_b, batch_size):
                                         input_b.split(batch_size),
                                         input_br.split(batch_size)):
 
-        mi = mutual_info(model, batch_a, batch_b, batch_br)
+        mi = mutual_info(model, batch_a, batch_b, batch_br, eps)
         test_acc_mi += mi.item()
 
     test_acc_mi /= (input_a.size(0) // batch_size)
     test_acc_mi /= math.log(2)
+
+    wandb.log({"test mi": test_acc_mi})
 
     return test_acc_mi

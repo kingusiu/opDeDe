@@ -7,3 +7,6 @@
 *.pyc
 .ipynb_checkpoints/
 __pycache__/
+wandb/
+dist
+
