@@ -1,5 +1,5 @@
 [build-system]
-requires = ["matplotlib>=3.4.2","flit_core>=3.4","numpy>=1.21.0"]
+requires = ["matplotlib>=3.3.4","flit_core>=3.4","numpy>=1.21.0"]
 build-backend = "flit_core.buildapi"
 
 [project]
