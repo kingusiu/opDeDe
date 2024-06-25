@@ -10,7 +10,7 @@ authors = [
 ]
 description = "DL-based Mutual information estimator"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.6.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
