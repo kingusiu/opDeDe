@@ -53,7 +53,7 @@ def train(model,input_a,input_b,batch_size,nb_epochs,lr=1e-3,eps=1e-8):
     
     for e in range(nb_epochs):
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr) # put this outside of epoch loop!
 
         input_br = input_b[torch.randperm(input_b.size(0))]
 
