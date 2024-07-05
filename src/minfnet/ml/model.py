@@ -43,17 +43,17 @@ class MI_Model(nn.Module):
             nn.Linear(200, 1)
         )
 
-    def forward(self, a, b, c):
+    def forward(self, a, b, ctxt):
         a = self.features_a(a).view(a.size(0), -1)
         b = self.features_b(b).view(b.size(0), -1)
-        c = self.features_c(c).view(c.size(0), -1)
-        x = torch.cat((a, b, c), 1) # first dimension is batch-dimension
+        ctxt = self.features_c(ctxt).view(ctxt.size(0), -1)
+        x = torch.cat((a, b, ctxt), 1) # first dimension is batch-dimension
         return self.fully_connected(x)
 
 
-def mutual_info(model, batch_a, batch_b, batch_br, eps=1e-8):
+def mutual_info(model, batch_a, batch_b, batch_br, batch_ctxt, eps=1e-8):
 
-    return model(batch_a, batch_b).mean() - torch.log(model(batch_a, batch_br).exp().mean()+eps)
+    return model(batch_a, batch_b, batch_ctxt).mean() - torch.log(model(batch_a, batch_br, batch_ctxt).exp().mean()+eps)
 
 
 def train(model:MI_Model,input_a,input_b,batch_size,nb_epochs,lr=1e-3,eps=1e-8):
