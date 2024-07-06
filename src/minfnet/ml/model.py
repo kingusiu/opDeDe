@@ -31,7 +31,7 @@ class MI_Model(nn.Module):
         )
 
         # context conditioning the model (e.g. theta, the detector params)
-        self.ctxt = nn.Sequential(
+        self.features_ctxt = nn.Sequential(
             nn.Linear(ctxt_N, 32), nn.ReLU(),
             nn.Linear(32, 32), nn.ReLU(),
             nn.Linear(32, encoder_N), nn.ReLU(),
@@ -46,7 +46,7 @@ class MI_Model(nn.Module):
     def forward(self, a, b, ctxt):
         a = self.features_a(a).view(a.size(0), -1)
         b = self.features_b(b).view(b.size(0), -1)
-        ctxt = self.features_c(ctxt).view(ctxt.size(0), -1)
+        ctxt = self.features_ctxt(ctxt).view(ctxt.size(0), -1)
         x = torch.cat((a, b, ctxt), 1) # first dimension is batch-dimension
         return self.fully_connected(x)
 
