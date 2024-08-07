@@ -224,15 +224,14 @@ def generate_bimodal_gauss_mixture_samples(mus, N=int(1e5), train_test_split=Non
 # y ... signal received
 ##############################################################
 
-def generate_noisy_channel_samples(N=int(1e5), noise_std=0.1, train_test_split=None):
+def generate_noisy_channel_samples(N=int(1e5), noise_std_nominal=0.1, train_test_split=None):
 
-    train_test_split = calc_train_test_split_N(N,train_test_split)
+    idx = calc_train_test_split_N(N,train_test_split)
 
-    input_signal = np.linspace(0, 1, N)
+    in_sig = np.linspace(0, 1, N)
+    noise_std = np.random.normal(noise_std_nominal,0.1,N)
     noise = np.random.normal(0, noise_std, N)
-    output_signal = input_signal + noise
+    out_sig = in_sig + noise
 
-    A = torch.from_numpy(input_signal).unsqueeze(-1).to(rtut.device)
-    B = torch.from_numpy(output_signal).unsqueeze(-1).to(rtut.device)
-
-    return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
+    # return x,y,noise(=theta) for train and test
+    return in_sig[:idx], out_sig[:idx], in_sig[idx:], out_sig[idx:], noise_std[:idx], noise_std[idx:]
