@@ -5,7 +5,7 @@ import numpy as np
 import scipy.stats
 from scipy.stats import multivariate_normal
 
-from minfnet.util import runtime_util as rut
+from minfnet.util import runtime_util as rtut
 # import src.util.runtime_util as rtut
 
 ##############################################
@@ -214,5 +214,25 @@ def generate_bimodal_gauss_mixture_samples(mus, N=int(1e5), train_test_split=Non
     A, B = samples[:,0].astype(np.float32), samples[:,1].astype(np.float32)
     A = torch.from_numpy(A).unsqueeze(-1).to(rtut.device)
     B = torch.from_numpy(B).unsqueeze(-1).to(rtut.device)
+
+    return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
+
+
+###############################################################
+#       generate noisy channel variables
+# x ... true signal sent
+# y ... signal received
+##############################################################
+
+def generate_noisy_channel_samples(N=int(1e5), noise_std=0.1, train_test_split=None):
+
+    train_test_split = calc_train_test_split_N(N,train_test_split)
+
+    input_signal = np.linspace(0, 1, N)
+    noise = np.random.normal(0, noise_std, N)
+    output_signal = input_signal + noise
+
+    A = torch.from_numpy(input_signal).unsqueeze(-1).to(rtut.device)
+    B = torch.from_numpy(output_signal).unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]

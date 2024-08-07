@@ -40,7 +40,7 @@ class MI_Model(nn.Module):
         self.fully_connected = nn.Sequential(
             nn.Linear(encoder_N*3, 200),
             nn.ReLU(),
-            nn.Linear(200, 1)
+            nn.Linear(200, 1) # todo: add relu to guarantee positive output (probs)
         )
 
     def forward(self, a, b, ctxt):
