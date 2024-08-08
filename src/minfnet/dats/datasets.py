@@ -7,10 +7,10 @@ class MinfDataset(Dataset):
         self.A = A_var
         self.B = B_var
         self.thetas = thetas
-        self.B_perm = self.B[torch.randperm(self.B.size(0))]
+        self.B_perm = self.B[torch.randperm(len(self.B))]
 
     def __len__(self):
-        return self.A.size(0)
+        return len(self.A)
     
     def __getitem__(self, idx):
         return self.A[idx], self.B[idx], self.B_perm[idx], self.thetas[idx]

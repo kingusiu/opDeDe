@@ -5,6 +5,8 @@ from torch import nn
 import torch.nn.functional as F
 import wandb
 
+import minfnet.util.runtime_util as rtut
+
 
 ##################################
 #               model
@@ -51,72 +53,65 @@ class MI_Model(nn.Module):
         return self.fully_connected(x)
 
 
-def mutual_info(model, batch_a, batch_b, batch_br, batch_ctxt, eps=1e-8):
+def mutual_info(dep_ab, indep_ab, eps=1e-8):
 
-    return model(batch_a, batch_b, batch_ctxt).mean() - torch.log(model(batch_a, batch_br, batch_ctxt).exp().mean()+eps)
+        return dep_ab.mean() - torch.log(indep_ab.exp().mean()+eps)
 
 
-def train(model:MI_Model,input_a,input_b,batch_size,nb_epochs,lr=1e-3,eps=1e-8):
 
+def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
+
+    model.train()
     wandb.watch(model, mutual_info, log="all", log_freq=10)
-
     train_mi = []
-
     b_c = 0
     
     for e in range(nb_epochs):
-
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr) # put this outside of epoch loop!
-
-        input_br = input_b[torch.randperm(input_b.size(0))]
-
+        
         acc_mi = 0.0
+        
+        for b_i, batch in enumerate(dataloader):
+            
+            batch_a, batch_b, batch_br, theta = [b.to(rtut.device) for b in batch]
 
-        # import ipdb; ipdb.set_trace()
+            # apply the model: pass a & b and a & b_permuted (conditioned on theta)
+            dep_ab = model(batch_a, batch_b, theta)
+            indep_ab = model(batch_a, batch_br, theta)
 
-        for b_i, (batch_a, batch_b, batch_br) in enumerate(zip(input_a.split(batch_size),
-                                            input_b.split(batch_size),
-                                            input_br.split(batch_size))):
-
-            mi = mutual_info(model, batch_a, batch_b, batch_br,eps)
-            acc_mi += mi.item()
-            loss = - mi
+            mi = mutual_info(dep_ab=dep_ab, indep_ab=indep_ab, eps=eps)
+            loss = -mi
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            if ((b_i + 1) % 30) == 0:
-                b_c += b_i
-                wandb.log({"epoch": e, "loss": loss}, step=b_c)
-
-        acc_mi /= (input_a.size(0) // batch_size) # mi per batch
+        
+        acc_mi += mi.item()
+        acc_mi /= len(dataloader)  # mi per batch
         acc_mi /= math.log(2)
-
+        
         wandb.log({"epoch": e, "mi": acc_mi})
-
         train_mi.append(acc_mi)
-
-        print(f'{e+1} {acc_mi:.04f}') # {entropy(classes) / math.log(2):.04f}')
-
+        print(f'{e+1} {acc_mi:.04f}')
         sys.stdout.flush()
 
     return acc_mi
 
 
-def test(model, input_a, input_b, batch_size,eps=1e-8):
+def test(model, dataloader, eps=1e-8):
 
-    input_br = input_b[torch.randperm(input_b.size(0))]
-
+    model.eval()
     test_acc_mi = 0.0
 
-    for batch_a, batch_b, batch_br in zip(input_a.split(batch_size),
-                                        input_b.split(batch_size),
-                                        input_br.split(batch_size)):
+    for batch in dataloader:
 
-        mi = mutual_info(model, batch_a, batch_b, batch_br, eps)
+        batch_a, batch_b, batch_br, theta = [b.to(rtut.device) for b in batch]
+
+        dep_ab = model(batch_a, batch_b, theta)
+        indep_ab = model(batch_a, batch_br, theta)
+        mi = mutual_info(dep_ab=dep_ab, indep_ab=indep_ab, eps=eps)
         test_acc_mi += mi.item()
 
-    test_acc_mi /= (input_a.size(0) // batch_size)
+    test_acc_mi /= len(dataloader)
     test_acc_mi /= math.log(2)
 
     wandb.log({"test mi": test_acc_mi})
