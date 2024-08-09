@@ -171,8 +171,6 @@ def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list =
     cov = [[stds[0]**2, stds[0]*stds[1]*corr], [stds[0]*stds[1]*corr, stds[1]**2]]
     normal = multivariate_normal(means, cov, allow_singular=True) 
     A, B = normal.rvs(size=N).astype(np.float32).T
-    A = torch.from_numpy(A).unsqueeze(-1).to(rtut.device)
-    B = torch.from_numpy(B).unsqueeze(-1).to(rtut.device)
 
     return A[:train_test_split], B[:train_test_split], A[train_test_split:], B[train_test_split:]
 
@@ -228,7 +226,7 @@ def generate_noisy_channel_samples(N=int(1e5), noise_std_nominal=0.1, train_test
 
     idx = calc_train_test_split_N(N,train_test_split)
 
-    in_sig = np.linspace(0, 1, N).astype(np.float32).reshape(-1, 1)
+    in_sig = np.linspace(0, 1, N).astype(np.float32).reshape(-1, 1)*3.0
     noise_std = np.abs(np.random.normal(noise_std_nominal,0.05,N)).astype(np.float32)
     noise = np.random.normal(0, noise_std, N).astype(np.float32).reshape(-1, 1)
     out_sig = in_sig + noise

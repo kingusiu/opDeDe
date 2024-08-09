@@ -62,7 +62,7 @@ def mutual_info(dep_ab, indep_ab, eps=1e-8):
 def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
 
     model.train()
-    wandb.watch(model, mutual_info, log="all", log_freq=10)
+    
     train_mi = []
     b_c = 0
     
