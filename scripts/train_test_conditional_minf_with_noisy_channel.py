@@ -21,12 +21,12 @@ logger = heplog.get_logger(__name__)
 
 def plot_inputs(A_list, B_list, theta_list, plot_name='scatter_plot.png', fig_dir='results'):
     num_plots = len(A_list)
-    fig, axs = plt.subplots(1, num_plots, figsize=(8, 6*num_plots))
+    fig, axs = plt.subplots(1, num_plots, figsize=(6*num_plots,8))
     for i in range(num_plots):
         axs[i].scatter(A_list[i], B_list[i])
         axs[i].set_xlabel('A')
         axs[i].set_ylabel('B')
-        axs[i].set_title(f'noisy channel with theta={theta_list[i]:.03f}')
+        axs[i].set_title(f'theta={theta_list[i]:.03f}')
     plot_path = os.path.join(fig_dir, plot_name)
     logger.info(f'saving plot to {plot_path}')
     plt.savefig(plot_path)
@@ -41,9 +41,11 @@ def plot_results(result_ll,plot_name='mi_vs_theta.png',fig_dir='results.png'):
     true_mis = result_ll[:,2]
 
     plt.figure(figsize=(8,6))
-    plt.plot(thetas, train_mis, label='train')
-    plt.plot(thetas, true_mis, label='true')
+    plt.plot(thetas, train_mis, label='approx mi')
+    plt.plot(thetas, true_mis, label='true mi')
     plt.legend()
+    plt.xlabel('Theta/noise level')
+    plt.ylabel('Mutual Information')
     plot_path = os.path.join(fig_dir,plot_name)
     logger.info(f'saving plot to {plot_path}')
     plt.savefig(plot_path)
@@ -65,7 +67,7 @@ def main():
     nb_epochs = 30
     lr = 1e-3
     datestr = datetime.datetime.now().strftime('%Y%m%d') + '_run' + str(args.run_n)
-    fig_dir = 'results/noisy_channel_test/' + datestr
+    fig_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/' + datestr
     os.makedirs(fig_dir, exist_ok=True)
 
 
@@ -88,7 +90,7 @@ def main():
     #****************************************#
     #               load data 
     #****************************************#
-    N_per_theta = int(2e2)
+    N_per_theta = int(2e4)
 
     thetas = np.linspace(0.2,2.5,7)
     random.shuffle(thetas)
