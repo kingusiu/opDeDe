@@ -64,7 +64,7 @@ def main():
 
     batch_size = 256
     B_N = 1
-    nb_epochs = 30
+    nb_epochs = 50
     lr = 1e-3
     datestr = datetime.datetime.now().strftime('%Y%m%d') + '_run' + str(args.run_n)
     fig_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/' + datestr
@@ -92,7 +92,7 @@ def main():
     #****************************************#
     N_per_theta = int(2e4)
 
-    thetas = np.linspace(0.2,2.5,7)
+    thetas = np.linspace(0.2,2.7,7)
     random.shuffle(thetas)
 
     result_ll = []
@@ -161,6 +161,8 @@ def main():
     
     plot_inputs(data_dict['A_test'], data_dict['B_test'], data_dict['theta_test'], plot_name='scatter_plot_inputs_test.png', fig_dir=fig_dir)
     plot_results(result_ll,plot_name='mi_vs_theta_test.png',fig_dir=fig_dir)
+
+    np.savetxt(os.path.join(fig_dir, 'result_ll.txt'), result_ll[:, [0, 2]])
 
 
 if __name__ == "__main__":

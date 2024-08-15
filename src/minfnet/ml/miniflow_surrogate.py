@@ -63,6 +63,7 @@ def LogProba(x, ldj):
 
 # START_MODEL
 class PiecewiseLinear(nn.Module):
+
     def __init__(self, nb, xmin, xmax):
         super().__init__()
         self.xmin = xmin
@@ -74,10 +75,10 @@ class PiecewiseLinear(nn.Module):
 
     def forward(self, x):
         y = self.alpha + self.xi.exp().cumsum(0)
-        u = self.nb * (x - self.xmin) / (self.xmax - self.xmin)
-        n = u.long().clamp(0, self.nb - 1)
-        a = (u - n).clamp(0, 1)
-        x = (1 - a) * y[n] + a * y[n + 1]
+        u = self.nb * (x - self.xmin) / (self.xmax - self.xmin) # find index of the piece where x falls into
+        n = u.long().clamp(0, self.nb - 1) # make sure index of piece is within number of pieces xi
+        a = (u - n).clamp(0, 1) # find relative position of x within piece to use as weight of the two y anchor points
+        x = (1 - a) * y[n] + a * y[n + 1] # linear interpolation between two neighboring pieces left and right of x
         return x
 # END_MODEL
 
