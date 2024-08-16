@@ -2,7 +2,7 @@ import wandb
 from sklearn import feature_selection
 
 from minfnet.dats import input_generator as inge
-from minfnet.ml import model as modl        
+from minfnet.ml import mime as modl        
 from minfnet.util import runtime_util as rtut
 from minfnet.util import math_util as maut
 

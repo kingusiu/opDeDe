@@ -15,3 +15,16 @@ class MinfDataset(Dataset):
     def __getitem__(self, idx):
         return self.A[idx], self.B[idx], self.B_perm[idx], self.thetas[idx]
     
+
+class SurrDataset(Dataset):
+    
+    def __init__(self, theta, mi):
+        self.theta = theta
+        self.mi = mi
+    
+    def __len__(self):
+        return len(self.theta)
+        
+    def __getitem__(self, idx):
+        return self.theta[idx], self.mi[idx]
+    

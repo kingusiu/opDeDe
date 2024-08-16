@@ -8,7 +8,7 @@ import wandb
 
 from minfnet.dats import input_generator as inge
 from minfnet.dats import datasets as dase
-from minfnet.ml import model as modl
+from minfnet.ml import mime as modl
 from minfnet.util import runtime_util as rtut
 
 from heputl import logging as heplog
@@ -64,7 +64,7 @@ def main():
 
     batch_size = 256
     B_N = 1
-    nb_epochs = 50
+    nb_epochs = 60
     lr = 1e-3
     datestr = datetime.datetime.now().strftime('%Y%m%d') + '_run' + str(args.run_n)
     fig_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/' + datestr
@@ -90,9 +90,9 @@ def main():
     #****************************************#
     #               load data 
     #****************************************#
-    N_per_theta = int(2e4)
+    N_per_theta = int(5e4)
 
-    thetas = np.linspace(0.2,2.7,7)
+    thetas = np.linspace(0.1,2.3,7)
     random.shuffle(thetas)
 
     result_ll = []
@@ -132,7 +132,7 @@ def main():
 
 
     random.shuffle(thetas)
-    N_per_theta = int(1e3)
+    N_per_theta = int(5e4)
     result_ll = []
 
     data_dict = {'A_test': [], 'B_test': [], 'theta_test': []}
@@ -162,7 +162,8 @@ def main():
     plot_inputs(data_dict['A_test'], data_dict['B_test'], data_dict['theta_test'], plot_name='scatter_plot_inputs_test.png', fig_dir=fig_dir)
     plot_results(result_ll,plot_name='mi_vs_theta_test.png',fig_dir=fig_dir)
 
-    np.savetxt(os.path.join(fig_dir, 'result_ll.txt'), result_ll[:, [0, 2]])
+    result_ll = np.array(result_ll)
+    np.savez(os.path.join(fig_dir, 'result_ll.npz'), theta=result_ll[:, 0], mi=result_ll[:, 1])
 
 
 if __name__ == "__main__":

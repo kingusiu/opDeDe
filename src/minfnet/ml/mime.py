@@ -42,7 +42,8 @@ class MI_Model(nn.Module):
         self.fully_connected = nn.Sequential(
             nn.Linear(encoder_N*3, 200),
             nn.ReLU(),
-            nn.Linear(200, 1) # todo: add relu to guarantee positive output (probs)
+            nn.Linear(200, 1),
+            nn.Sigmoid() # todo: try softplus to guarantee positive output (probs), but allow for high correlative values
         )
 
     def forward(self, a, b, ctxt):
@@ -55,7 +56,7 @@ class MI_Model(nn.Module):
 
 def mutual_info(dep_ab, indep_ab, eps=1e-8):
 
-        return dep_ab.mean() - torch.log(indep_ab.exp().mean()+eps)
+        return dep_ab.mean() - torch.log(indep_ab.exp().mean()+eps) # means over batch
 
 
 
