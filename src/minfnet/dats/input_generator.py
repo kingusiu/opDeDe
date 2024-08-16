@@ -226,11 +226,10 @@ def generate_noisy_channel_samples(N=int(1e5), noise_std_nominal=0.1, train_test
 
     idx = calc_train_test_split_N(N,train_test_split)
 
-    in_sig = np.linspace(0, 1, N).astype(np.float32).reshape(-1, 1)*4.0
+    in_sig = np.linspace(0, 1, N).astype(np.float32)*4.0
     noise_std = np.abs(np.random.normal(noise_std_nominal,0.05,N)).astype(np.float32)
-    noise = np.random.normal(0, noise_std, N).astype(np.float32).reshape(-1, 1)
+    noise = np.random.normal(0, noise_std, N).astype(np.float32)
     out_sig = in_sig + noise
-    noise_std = noise_std.reshape(-1, 1)
 
     # return x,y,noise(=theta) for train and test
     return in_sig[:idx], out_sig[:idx], noise_std[:idx], in_sig[idx:], out_sig[idx:], noise_std[idx:]

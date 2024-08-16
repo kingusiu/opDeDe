@@ -7,6 +7,7 @@ activation_functions = {
 }
 
 class MLP_Surrogate(nn.Module):
+    
     def __init__(self, N_feat=1, activation='elu', N_hidden=10):
         super().__init__()
         self.layer1 = nn.Linear(N_feat, N_hidden)

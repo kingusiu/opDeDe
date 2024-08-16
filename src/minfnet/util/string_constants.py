@@ -20,7 +20,7 @@ configs_calo_baby = {
         'bad calo' : 'data/testfile_t0.pkl'
     }
 
-configs_random = {f'corr {corr:.02f}': corr for corr in np.arange(0.,1.05,0.05)}
+configs_random = {f'corr {corr:.03f}': round(corr, 3) for corr in np.arange(-1.0, 1.05, 0.2)}
 
 N_layers = 30
 configs_layer_sum = {f'{i} layers sum':f'sum_{i}L' for i in range(1,N_layers+1)}

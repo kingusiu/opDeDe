@@ -10,6 +10,7 @@ from minfnet.dats import input_generator as inge
 from minfnet.dats import datasets as dase
 from minfnet.ml import mime as modl
 from minfnet.util import runtime_util as rtut
+from minfnet.util import string_constants as stco
 
 from heputl import logging as heplog
 import random
@@ -59,12 +60,13 @@ def main():
     #****************************************#
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--run', dest='run_n',type=int, default=0, help='Run number')
+    parser.add_argument('-r', '--run', dest='run_n', type=int, default=0, help='Run number')
+    parser.add_argument('-c', '--choice', dest='thetaT', type=str, default='corr', choices=['noise', 'corr'], help='Choice between "noise" or "corr"')
     args = parser.parse_args()
 
     batch_size = 256
     B_N = 1
-    nb_epochs = 60
+    nb_epochs = 6
     lr = 1e-3
     datestr = datetime.datetime.now().strftime('%Y%m%d') + '_run' + str(args.run_n)
     fig_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/' + datestr
@@ -92,7 +94,7 @@ def main():
     #****************************************#
     N_per_theta = int(5e4)
 
-    thetas = np.linspace(0.1,2.3,7)
+    thetas = np.linspace(0.1,2.3,7) if args.thetaT == 'noise' else list(stco.configs_random.values())
     random.shuffle(thetas)
 
     result_ll = []
@@ -103,7 +105,12 @@ def main():
 
         logger.info(f'generating data for theta {theta:.03f}')
 
-        A_train, B_train, theta_train, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
+        if args.thetaT == 'noise':
+            A_train, B_train, theta_train, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
+        else:
+            A_train, B_train, *_ = inge.generate_random_variables(N=N_per_theta, corr=theta, train_test_split=None)
+            theta_train = B_train-A_train
+
         data_dict['A_train'].append(A_train)
         data_dict['B_train'].append(B_train)
         data_dict['theta_train'].append(theta)
@@ -115,7 +122,7 @@ def main():
         #               train model
         #****************************************#
         train_acc_mi = modl.train(model, train_dataloader, nb_epochs, optimizer)
-        train_true_mi = feature_selection.mutual_info_regression(A_train, B_train.ravel())[0]
+        train_true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1,1), B_train)[0]
 
         #****************************************#
         #              print results    
@@ -141,7 +148,12 @@ def main():
     
         logger.info(f'generating data for theta {theta:.03f}')
 
-        A_test, B_test, theta_test, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
+        if args.thetaT == 'noise':
+            A_test, B_test, theta_test, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
+        else:
+            A_test, B_test, *_ = inge.generate_random_variables(N=N_per_theta, corr=theta, train_test_split=None)
+            theta_test = B_test - A_test
+
         data_dict['A_test'].append(A_test)
         data_dict['B_test'].append(B_test)
         data_dict['theta_test'].append(theta)
