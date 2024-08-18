@@ -33,6 +33,7 @@ def plot_theta_vs_mi(theta, mi, scatter_thetas=False, plot_name=None, fig_dir=No
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--run_n', type=int, default=0, help='Run number')
+parser.add_argument('-c', '--choice', dest='thetaT', type=str, default='corr', choices=['noise', 'corr'], help='Choice between "noise" or "corr"')
 args = parser.parse_args()
 
 #****************************************************************#

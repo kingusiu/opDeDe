@@ -43,7 +43,8 @@ class MI_Model(nn.Module):
             nn.Linear(encoder_N*3, 200),
             nn.ReLU(),
             nn.Linear(200, 1),
-            nn.Sigmoid() # todo: try softplus to guarantee positive output (probs), but allow for high correlative values
+            #nn.Sigmoid() # todo: try softplus to guarantee positive output (probs), but allow for high correlative values
+            #nn.Tanh()
         )
 
     def forward(self, a, b, ctxt):
