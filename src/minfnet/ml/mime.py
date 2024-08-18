@@ -12,36 +12,38 @@ import minfnet.util.runtime_util as rtut
 #               model
 ##################################
 
+acti_dd = { 'relu': nn.ReLU(), 'tanh': nn.Tanh(), 'sigmoid': nn.Sigmoid(), 'elu': nn.ELU() , 'leaky': nn.LeakyReLU() }
+
 class MI_Model(nn.Module):
 
-    def __init__(self, B_N, ctxt_N, encoder_N=128):
+    def __init__(self, B_N, ctxt_N, encoder_N=128, acti='relu'):
         
         super(MI_Model, self).__init__()
         
         # encoder for variable of interest / target (e.g. true energy)
         self.features_a = nn.Sequential(
-            nn.Linear(1, 32), nn.ReLU(),
-            nn.Linear(32, 32), nn.ReLU(),
-            nn.Linear(32, encoder_N), nn.ReLU(),
+            nn.Linear(1, 32), acti_dd[acti],
+            nn.Linear(32, 32), acti_dd[acti],
+            nn.Linear(32, encoder_N), acti_dd[acti],
         )
 
         # encoder for informing variables (e.g. calo hits)
         self.features_b = nn.Sequential(
-            nn.Linear(B_N, 32), nn.ReLU(),
-            nn.Linear(32, 32), nn.ReLU(),
-            nn.Linear(32, encoder_N), nn.ReLU(),
+            nn.Linear(B_N, 32), acti_dd[acti],
+            nn.Linear(32, 32), acti_dd[acti],
+            nn.Linear(32, encoder_N), acti_dd[acti],
         )
 
         # context conditioning the model (e.g. theta, the detector params)
         self.features_ctxt = nn.Sequential(
-            nn.Linear(ctxt_N, 32), nn.ReLU(),
-            nn.Linear(32, 32), nn.ReLU(),
-            nn.Linear(32, encoder_N), nn.ReLU(),
+            nn.Linear(ctxt_N, 32), acti_dd[acti],
+            nn.Linear(32, 32), acti_dd[acti],
+            nn.Linear(32, encoder_N), acti_dd[acti],
         )
 
         self.fully_connected = nn.Sequential(
             nn.Linear(encoder_N*3, 200),
-            nn.ReLU(),
+            acti_dd[acti],
             nn.Linear(200, 1),
             #nn.Sigmoid() # todo: try softplus to guarantee positive output (probs), but allow for high correlative values
             #nn.Tanh()

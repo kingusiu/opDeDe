@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 
 logger = heplog.get_logger(__name__)
 
+corrs_ll = {f'corr {corr:.03f}': round(corr, 3) for corr in np.arange(0.01, 1.00, 0.1)}
+
 
 def plot_inputs(A_list, B_list, theta_list, plot_name='scatter_plot.png', fig_dir='results'):
     num_plots = len(A_list)
@@ -98,7 +100,7 @@ def main():
     #****************************************#
 
     # create model
-    model = modl.MI_Model(B_N=B_N, ctxt_N=1)
+    model = modl.MI_Model(B_N=B_N, ctxt_N=1, acti='leaky')
     model.to(rtut.device)
 
     # create optimizer
@@ -110,7 +112,7 @@ def main():
     #****************************************#
     N_per_theta = int(5e4)
 
-    thetas = np.linspace(0.1,2.3,7) if args.thetaT == 'noise' else list(stco.configs_random.values())
+    thetas = np.linspace(0.1,2.3,7) if args.thetaT == 'noise' else list(corrs_ll.values())
     random.shuffle(thetas)
 
     result_ll = []
