@@ -1,0 +1,10 @@
+B_N: 1
+activation: leaky
+batch_size: 256
+lr: 0.0001
+n_epochs: 100
+run_n: 2
+theta_max: 0.95
+theta_min: -0.2
+theta_step: 0.15
+theta_type: corr

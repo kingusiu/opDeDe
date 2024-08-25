@@ -16,9 +16,11 @@ acti_dd = { 'relu': nn.ReLU(), 'tanh': nn.Tanh(), 'sigmoid': nn.Sigmoid(), 'elu'
 
 class MI_Model(nn.Module):
 
-    def __init__(self, B_N, ctxt_N, encoder_N=128, acti='relu'):
+    def __init__(self, B_N, ctxt_N, encoder_N=128, acti='relu', acti_out=None, ctxt_encoder_N=None):
         
         super(MI_Model, self).__init__()
+
+        self.ctxt_encoder_N = ctxt_encoder_N or encoder_N//4
         
         # encoder for variable of interest / target (e.g. true energy)
         self.features_a = nn.Sequential(
@@ -36,18 +38,19 @@ class MI_Model(nn.Module):
 
         # context conditioning the model (e.g. theta, the detector params)
         self.features_ctxt = nn.Sequential(
-            nn.Linear(ctxt_N, 32), acti_dd[acti],
-            nn.Linear(32, 32), acti_dd[acti],
-            nn.Linear(32, encoder_N), acti_dd[acti],
+            nn.Linear(ctxt_N, 10), acti_dd[acti],
+            nn.Linear(10, 10), acti_dd[acti],
+            nn.Linear(10, self.ctxt_encoder_N), acti_dd[acti],
         )
 
-        self.fully_connected = nn.Sequential(
-            nn.Linear(encoder_N*3, 200),
-            acti_dd[acti],
-            nn.Linear(200, 1),
-            #nn.Sigmoid() # todo: try softplus to guarantee positive output (probs), but allow for high correlative values
-            #nn.Tanh()
-        )
+        connected_mlp = []
+        connected_mlp.append(nn.Linear(encoder_N*2+self.ctxt_encoder_N, 200))
+        connected_mlp.append(acti_dd[acti])
+        connected_mlp.append(nn.Linear(200, 1))
+        if acti_out is not None:
+            connected_mlp.append(acti_dd[acti_out])
+
+        self.fully_connected = nn.Sequential(*connected_mlp)
 
     def forward(self, a, b, ctxt):
         a = self.features_a(a).view(a.size(0), -1)
@@ -68,13 +71,12 @@ def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
     model.train()
     
     train_mi = []
-    b_c = 0
     
     for e in range(nb_epochs):
         
         acc_mi = 0.0
         
-        for b_i, batch in enumerate(dataloader):
+        for batch in dataloader:
             
             batch_a, batch_b, batch_br, theta = [b.to(rtut.device) for b in batch]
 
@@ -89,7 +91,8 @@ def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
             loss.backward()
             optimizer.step()
         
-        acc_mi += mi.item()
+            acc_mi += mi.item()
+        
         acc_mi /= len(dataloader)  # mi per batch
         acc_mi /= math.log(2)
         
@@ -112,12 +115,11 @@ def test(model, dataloader, eps=1e-8):
 
         dep_ab = model(batch_a, batch_b, theta)
         indep_ab = model(batch_a, batch_br, theta)
+        
         mi = mutual_info(dep_ab=dep_ab, indep_ab=indep_ab, eps=eps)
         test_acc_mi += mi.item()
 
     test_acc_mi /= len(dataloader)
     test_acc_mi /= math.log(2)
-
-    wandb.log({"test mi": test_acc_mi})
 
     return test_acc_mi
