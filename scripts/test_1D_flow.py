@@ -7,12 +7,14 @@ import minfnet.ml.miniflow_surrogate as miflo
 
 ######################################################################
 
+# bimodal target distribution
 def phi(x):
     p, std = 0.3, 0.2
     mu = (1 - p) * torch.exp(LogProba((x - 0.5) / std, math.log(1 / std))) + \
               p  * torch.exp(LogProba((x + 0.5) / std, math.log(1 / std)))
     return mu
 
+# sample from bimodal target distribution
 def sample_phi(nb):
     p, std = 0.3, 0.2
     result = torch.empty(nb).normal_(0, std)
@@ -75,13 +77,13 @@ if k%10 == 0: print(k, loss.item())
 input = torch.linspace(-3, 3, 175)
 
 mu = phi(input)
-mu_N = torch.exp(LogProba(input, 0))
+mu_N = torch.exp(LogProba(input, 0)) # true target distribution
 
 input.requires_grad_()
 output = model(input)
 
 grad = torch.autograd.grad(output.sum(), input)[0]
-mu_hat = LogProba(output, grad.log()).detach().exp()
+mu_hat = LogProba(output, grad.log()).detach().exp() # approximated target distribution
 
 
 ######################################################################

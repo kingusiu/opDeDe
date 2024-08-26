@@ -64,33 +64,72 @@ def LogProba(x, ldj):
 # START_MODEL
 class PiecewiseLinear(nn.Module):
 
-    def __init__(self, nb, xmin, xmax):
+    def __init__(self, nb, xmin, xmax, n_conditions = 1):
+
         super().__init__()
         self.xmin = xmin
         self.xmax = xmax
         self.nb = nb
         self.alpha = nn.Parameter(torch.tensor([xmin], dtype = torch.float))
-        mu = math.log((xmax - xmin) / nb)
-        self.xi = nn.Parameter(torch.empty(nb + 1).normal_(mu, 1e-4))
+        #mu = math.log((xmax - xmin) / nb)
+        #self.xi = nn.Parameter(torch.empty(nb + 1).normal_(mu, 1e-4))
 
-    def forward(self, x):
-        y = self.alpha + self.xi.exp().cumsum(0)
-        u = self.nb * (x - self.xmin) / (self.xmax - self.xmin) # find index of the piece where x falls into
-        n = u.long().clamp(0, self.nb - 1) # make sure index of piece is within number of pieces xi
-        a = (u - n).clamp(0, 1) # find relative position of x within piece to use as weight of the two y anchor points
-        x = (1 - a) * y[n] + a * y[n + 1] # linear interpolation between two neighboring pieces left and right of x
-        return x
+        self.condition_net = torch.nn.Sequential(
+            torch.nn.Linear(n_conditions, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, nb + 1)
+        )
+
+
+    def forward(self, x, conditions):
+
+        #since conditions change, this is now different for each batch element, add zero dimension everywhere
+        xi = 0.1 * self.condition_net(conditions)
+        #print("xi.shape, x.shape",xi.shape, x.shape)  # B x nb+1
+        y = self.alpha + xi.exp().cumsum(1) # 0 -> 1 # B x nb+1
+        #print("y.shape",y.shape)
+        u = self.nb * (x - self.xmin) / (self.xmax - self.xmin) # B
+        #print("u.shape",u.shape) 
+        n = u.long().clamp(0, self.nb - 1) # B
+        #print("n.shape",n.shape)
+        a = (u - n).clamp(0, 1) # B
+        #print("a.shape",a.shape)
+        y0 = y.gather(1, n)  # Gather y values in dim 1 at indices n
+        y1 = y.gather(1, n + 1)  # Gather y values in dim 1 at indices n + 1
+
+        # now we need to use the right batch elment in y
+        out = (1 - a) * y0 + a * y1
+        
+        return out
+
 # END_MODEL
 
-    def invert(self, y):
-        ys = self.alpha + self.xi.exp().cumsum(0).view(1, -1)
+    def invert(self, y, conditions): #FIXME also w.r.t. dimensions
+        # Generate xi from the condition input
+        xi = 0.1 * self.condition_net(conditions)
+        
+        # Calculate ys using the cumulative sum of the exponential of xi
+        ys = self.xmin + xi.exp().cumsum(dim=1)
+        
         yy = y.view(-1, 1)
-        k = torch.arange(self.nb).view(1, -1)
-        assert (y >= ys[0, 0]).min() and (y <= ys[0, self.nb]).min()
+        k = torch.arange(self.nb, device=y.device).view(1, -1)
+        
+        # Ensure y values are within the valid range
+        assert (y >= ys[:, 0]).all() and (y <= ys[:, -1]).all()
+        
         yk = ys[:, :-1]
         ykp1 = ys[:, 1:]
-        x = self.xmin + (self.xmax - self.xmin)/self.nb * ((yy >= yk) * (yy < ykp1).long() * (k + (yy - yk)/(ykp1 - yk))).sum(1)
+        
+        # Create masks to identify the correct intervals
+        masks = (yy >= yk) & (yy < ykp1)
+        
+        # Calculate the inverse transformation within the identified intervals
+        x = self.xmin + (self.xmax - self.xmin) / self.nb * ((masks.float() * (k + (yy - yk) / (ykp1 - yk))).sum(dim=1, keepdim=True))
+        
         return x
+
 
 class PositivePolynomial(nn.Module):
     def __init__(self, degree):
