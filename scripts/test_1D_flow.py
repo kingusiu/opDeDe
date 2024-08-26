@@ -69,15 +69,15 @@ for k in range(nb_epochs):
         optimizer.step()
     # END_OPTIMIZATION
 
-acc_loss += loss.item()
-if k%10 == 0: print(k, loss.item())
+    acc_loss += loss.item()
+    if k%10 == 0: print(k, loss.item())
 
 ######################################################################
 
 input = torch.linspace(-3, 3, 175)
 
-mu = phi(input)
-mu_N = torch.exp(LogProba(input, 0)) # true target distribution
+mu = phi(input) # true target distribution
+mu_N = torch.exp(LogProba(input, 0)) # true base distribution
 
 input.requires_grad_()
 output = model(input)
