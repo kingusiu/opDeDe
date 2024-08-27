@@ -39,28 +39,6 @@ set_seed(0)
 
 ######################################################################
 
-def phi(x):
-    p, std = 0.3, 0.2
-    mu = (1 - p) * torch.exp(LogProba((x - 0.5) / std, math.log(1 / std))) + \
-              p  * torch.exp(LogProba((x + 0.5) / std, math.log(1 / std)))
-    return mu
-
-def sample_phi(nb):
-    p, std = 0.3, 0.2
-    result = torch.empty(nb).normal_(0, std)
-    result = result + torch.sign(torch.rand(result.size()) - p) / 2
-    return result
-
-######################################################################
-
-# START_LOG_PROBA
-def LogProba(x, ldj):
-    log_p = ldj - 0.5 * (x**2 + math.log(2*pi))
-    return log_p
-# END_LOG_PROBA
-
-######################################################################
-
 # START_MODEL
 class PiecewiseLinear(nn.Module):
     def __init__(self, n_conditions, xmin=0., xmax=20, nb=1000):

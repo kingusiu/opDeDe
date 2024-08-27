@@ -15,7 +15,29 @@ class MinfDataset(Dataset):
     
     def __getitem__(self, idx):
         return self.A[idx], self.B[idx], self.B_perm[idx], self.thetas[idx]
+
+
+class InfinityMinfDataset(Dataset):
+
+    def __init__(self, x_fn, theta_fn, y_fn, N):
+        self.x_fn = x_fn
+        self.theta_fn = theta_fn
+        self.y_fn = y_fn
+        self.N = N       
+
+    def __len__(self):
+        return self.N
     
+    def __getitem__(self, idx):
+        x = self.x_fn()
+        theta = self.theta_fn()
+        y = self.y_fn(x, theta)
+        x_wrong = self.x_fn()
+        theta_wrong = self.theta_fn()
+        y_wrong = self.y_fn(x_wrong, theta_wrong)
+        return x, y, y_wrong, theta
+    
+
 
 class SurrDataset(Dataset):
     

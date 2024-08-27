@@ -1,12 +1,13 @@
-run_n : 6
+run_n : 8
 theta_type : corr # noise
 batch_size : 256
 B_N : 1
-n_epochs : 120
+n_epochs : 80
 lr : 0.0001
 activation : leaky
 activation_out : tanh
 ctxt_enc_n : null
-theta_min: 0.1
-theta_max: 1.0
-theta_step: 7
+theta_min: -0.9
+theta_max: 0.1
+theta_step: 0.2
+n_per_theta: 300000

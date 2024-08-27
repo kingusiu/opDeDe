@@ -60,6 +60,7 @@ os.makedirs(result_path,exist_ok=True)
 nb_samples = 20000
 nb_epochs = 150
 batch_size = 100
+eps = 1e-6
 
 model = miflo.PiecewiseLinear(nb = 1001, xmin = -4, xmax = 4, n_conditions=1)
 #model.train()
@@ -85,7 +86,7 @@ for k in range(nb_epochs):
             retain_graph = True, create_graph = True
         )
 
-        loss = ( 0.5 * (output**2 + math.log(2*math.pi)) - derivatives.log() ).mean()
+        loss = ( 0.5 * (output**2 + math.log(2*math.pi)) - torch.log(derivatives+eps) ).mean()
 
         optimizer.zero_grad()
         loss.backward()

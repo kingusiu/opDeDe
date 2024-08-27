@@ -50,7 +50,7 @@ def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram.png', fig_
 
 
 
-def plot_results(result_ll,plot_name='mi_vs_theta.png',fig_dir='results.png'):
+def plot_results(result_ll, plot_name='mi_vs_theta.png', fig_dir='results.png', xlabel='Theta/noise level'):
 
     result_ll = np.array(result_ll)
     result_ll = result_ll[result_ll[:, 0].argsort()]
@@ -62,9 +62,9 @@ def plot_results(result_ll,plot_name='mi_vs_theta.png',fig_dir='results.png'):
     plt.plot(thetas, train_mis, label='approx mi')
     plt.plot(thetas, true_mis, label='true mi')
     plt.legend()
-    plt.xlabel('Theta/noise level')
+    plt.xlabel(xlabel)
     plt.ylabel('Mutual Information')
-    plot_path = os.path.join(fig_dir,plot_name)
+    plot_path = os.path.join(fig_dir, plot_name)
     logger.info(f'saving plot to {plot_path}')
     plt.savefig(plot_path)
     plt.show()
@@ -110,7 +110,7 @@ def main():
     #****************************************#
     #               load data 
     #****************************************#
-    N_per_theta = int(5e4)
+    N_per_theta = config['n_per_theta']
 
     thetas = np.linspace(config['theta_min'],config['theta_max'],config['theta_step']) if config['theta_type'] == 'noise' \
             else list(corrs_ll(config['theta_min'],config['theta_max'],config['theta_step']).values())
@@ -150,7 +150,9 @@ def main():
         result_ll.append([theta, train_acc_mi, train_true_mi])
     
     plot_inputs(data_dict['A_train'], data_dict['B_train'], thetas, plot_name='scatter_plot_inputs_train.png', fig_dir=result_dir)
-    plot_results(result_ll, plot_name='mi_vs_theta_train.png', fig_dir=result_dir)
+    
+    xlabel = 'Theta/noise level' if config['theta_type'] == 'noise' else 'Theta/correlation'
+    plot_results(result_ll, plot_name='mi_vs_theta_train.png', fig_dir=result_dir, xlabel=xlabel)
     plot_histogram(data_dict['theta_train'], thetas, plot_name='theta_train_histogram.png', fig_dir=result_dir)
 
 
@@ -182,7 +184,7 @@ def main():
         dataset_test = dase.MinfDataset(A_var=A_test, B_var=B_test, thetas=theta_test)
         test_dataloader = torch.utils.data.DataLoader(dataset_test, batch_size=config['batch_size'], shuffle=False)
         #****************************************#
-        #               train model
+        #               test model
         #****************************************#
         test_acc_mi = modl.test(model, test_dataloader)
         test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1,1), B_test)[0]
@@ -195,7 +197,7 @@ def main():
         result_ll.append([theta, test_acc_mi, test_true_mi])
     
     plot_inputs(data_dict['A_test'], data_dict['B_test'], thetas, plot_name='scatter_plot_inputs_test.png', fig_dir=result_dir)
-    plot_results(result_ll,plot_name='mi_vs_theta_test.png',fig_dir=result_dir)
+    plot_results(result_ll,plot_name='mi_vs_theta_test.png',fig_dir=result_dir,xlabel=xlabel)
     plot_histogram(data_dict['theta_test'], thetas, plot_name='theta_test_histogram.png', fig_dir=result_dir)
 
     result_ll = np.array(result_ll)
