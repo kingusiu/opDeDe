@@ -63,17 +63,15 @@ def LogProba(x, ldj):
 
 # START_MODEL
 class PiecewiseLinear(nn.Module):
-
-    def __init__(self, nb, xmin, xmax, n_conditions = 1):
-
+    def __init__(self, n_conditions, xmin=0., xmax=20, nb=1000):
         super().__init__()
         self.xmin = xmin
         self.xmax = xmax
         self.nb = nb
         self.alpha = nn.Parameter(torch.tensor([xmin], dtype = torch.float))
         #mu = math.log((xmax - xmin) / nb)
+        
         #self.xi = nn.Parameter(torch.empty(nb + 1).normal_(mu, 1e-4))
-
         self.condition_net = torch.nn.Sequential(
             torch.nn.Linear(n_conditions, 64),
             torch.nn.ReLU(),
@@ -82,9 +80,16 @@ class PiecewiseLinear(nn.Module):
             torch.nn.Linear(64, nb + 1)
         )
 
-
     def forward(self, x, conditions):
-
+        '''
+        original implementation:
+        x torch.Size([100]) : B
+        y torch.Size([1002]) : nb+1
+        u torch.Size([100]) : B
+        n torch.Size([100]) : B
+        a torch.Size([100]) : B
+        out torch.Size([100]): B
+        '''
         #since conditions change, this is now different for each batch element, add zero dimension everywhere
         xi = 0.1 * self.condition_net(conditions)
         #print("xi.shape, x.shape",xi.shape, x.shape)  # B x nb+1
@@ -103,7 +108,6 @@ class PiecewiseLinear(nn.Module):
         out = (1 - a) * y0 + a * y1
         
         return out
-
 # END_MODEL
 
     def invert(self, y, conditions): #FIXME also w.r.t. dimensions
@@ -129,6 +133,7 @@ class PiecewiseLinear(nn.Module):
         x = self.xmin + (self.xmax - self.xmin) / self.nb * ((masks.float() * (k + (yy - yk) / (ykp1 - yk))).sum(dim=1, keepdim=True))
         
         return x
+
 
 
 class PositivePolynomial(nn.Module):

@@ -1,5 +1,5 @@
 run_n : 6
-theta_type : noise
+theta_type : corr # noise
 batch_size : 256
 B_N : 1
 n_epochs : 120
