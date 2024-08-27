@@ -107,7 +107,7 @@ class PiecewiseLinear(nn.Module):
 
 class Flow_Surrogate(nn.Module):
 
-    def __init__(self, data_dim, ctxt_dim, nodes_n, layers_n, K, tail_bound):
+    def __init__(self, data_dim, ctxt_dim, nodes_n=128, layers_n=3, K=8, tail_bound=3.5):
 
         super(Flow_Surrogate).__init__()
 
