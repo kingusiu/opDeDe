@@ -130,7 +130,7 @@ def main():
         
         logger.info(f'generating data for t1: {t1:.03f}, t2: {t2:.03f}')
 
-        A_train, B_train, theta_train, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
+        A_train, B_train, tt1_train, tt2_train, *_ = inge.generate_two_theta_noisy_samples(N=N_per_theta, t1_noise_nominal=t1, t2_damp_nominal=t2)
 
         data_dict['A_train'].append(A_train)
         data_dict['B_train'].append(B_train)

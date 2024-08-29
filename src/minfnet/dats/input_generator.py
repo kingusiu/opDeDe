@@ -239,12 +239,12 @@ def generate_two_theta_noisy_samples(N=int(1e5), t1_noise_nominal=0.1, t2_damp_n
     idx = calc_train_test_split_N(N,train_test_split)
 
     in_sig = np.linspace(0, 1, N).astype(np.float32)*4.0
+
     noise_std = np.abs(np.random.normal(t1_noise_nominal,0.05,N)).astype(np.float32)
     noise = np.random.normal(0, noise_std, N).astype(np.float32)
-    out_sig = in_sig + noise
+    
+    damp = np.abs(np.random.normal(t2_damp_nominal,0.05,N)).astype(np.float32)
 
-    noise_std2 = np.abs(np.random.normal(noise_std_nominal,0.05,N)).astype(np.float32)
-    noise2 = np.random.normal(0, noise_std2, N).astype(np.float32)
-    out_sig2 = in_sig + noise2
+    out_sig = in_sig + noise - np.log(damp)*in_sig
 
-    return in_sig[:idx], out_sig[:idx], noise_std[:idx], out_sig2[:idx], noise_std2[:idx], in_sig[idx:], out_sig[idx:], noise_std[idx:], out_sig2[idx:], noise_std2[idx:]
+    return in_sig[:idx], out_sig[:idx], noise_std[:idx], damp[:idx], in_sig[idx:], out_sig[idx:], noise_std[idx:], damp[idx:]
