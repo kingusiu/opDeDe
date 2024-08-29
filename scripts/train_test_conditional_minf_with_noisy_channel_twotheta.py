@@ -70,6 +70,14 @@ def plot_results(result_ll, plot_name='mi_vs_theta.png', fig_dir='results.png', 
     plt.show()
 
 
+def make_two_theta_grid(theta_min, theta_max, theta_num):
+    t1 = np.linspace(theta_min, theta_max, theta_num)
+    t2 = np.linspace(1, 1+theta_max, theta_num)
+    random.shuffle(t1)
+    random.shuffle(t2)
+    tt1,tt2 = np.meshgrid(t1, t2)
+    return tt1, tt2
+
 def main():
 
     #****************************************#
@@ -112,24 +120,17 @@ def main():
     #****************************************#
     N_per_theta = config['n_per_theta']
 
-    thetas = np.linspace(config['theta_min'],config['theta_max'],config['theta_step']) if 'noise' in config['theta_type'] \
-            else list(corrs_ll(config['theta_min'],config['theta_max'],config['theta_step']).values())
-    random.shuffle(thetas)
+    tt1, tt2 = make_two_theta_grid(config['theta_min'],config['theta_max'],config['theta_step'])
 
     result_ll = []
 
     data_dict = {'A_train': [], 'B_train': [], 'theta_train': []}
 
-    for i,theta in enumerate(thetas):
+    for t1, t2 in zip(tt1.flatten(), tt2.flatten()):
+        
+        logger.info(f'generating data for t1: {t1:.03f}, t2: {t2:.03f}')
 
-        logger.info(f'generating data for theta {theta:.03f}')
-
-        if 'noise' in config['theta_type']:
-            if config['theta_type'] == 'noisesqr': theta = theta**2
-            A_train, B_train, theta_train, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
-        else:
-            A_train, B_train, *_ = inge.generate_random_variables(N=N_per_theta, corr=theta, train_test_split=None)
-            theta_train = np.random.normal(loc=theta, scale=0.1, size=A_train.shape)
+        A_train, B_train, theta_train, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
 
         data_dict['A_train'].append(A_train)
         data_dict['B_train'].append(B_train)

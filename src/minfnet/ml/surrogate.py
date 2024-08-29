@@ -105,11 +105,9 @@ class PiecewiseLinear(nn.Module):
 
 
 
-class Flow_Surrogate(nn.Module):
+class Flow_Surrogate(nf.ConditionalNormalizingFlow):
 
     def __init__(self, data_dim, ctxt_dim, nodes_n=128, layers_n=3, K=8, tail_bound=3.5):
-
-        super(Flow_Surrogate).__init__()
 
         # FLOW MODEL
         self.K = K
@@ -138,10 +136,7 @@ class Flow_Surrogate(nn.Module):
                 )
 
         # Set base distribution
-        self.q0 = nf.distributions.base.ConditionalDiagGaussian(self.data_dim, context_encoder=self.context_encoder)
+        q0 = nf.distributions.base.ConditionalDiagGaussian(self.data_dim, context_encoder=self.context_encoder)
         
-        self.full_flow = nf.ConditionalNormalizingFlow(self.q0, flows)
-
-    def forward(self, x, context):
-        return self.full_flow(x, context)
+        super(Flow_Surrogate).__init__(q0, flows)
     
