@@ -7,7 +7,9 @@ class MinfDataset(Dataset):
     def __init__(self, A_var, B_var, thetas):
         self.A = torch.tensor(A_var.reshape(-1, 1), dtype=torch.float32)
         self.B = torch.tensor(B_var.reshape(-1, 1), dtype=torch.float32)
-        self.thetas = torch.tensor(thetas.reshape(-1, 1), dtype=torch.float32)
+        if len(thetas.shape) == 1:
+            thetas = thetas.reshape(-1, 1)
+        self.thetas = torch.tensor(thetas, dtype=torch.float32)
         self.B_perm = self.B[torch.randperm(len(self.B))]
 
     def __len__(self):

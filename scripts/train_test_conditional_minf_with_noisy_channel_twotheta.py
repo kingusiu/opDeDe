@@ -14,6 +14,7 @@ from minfnet.util import string_constants as stco
 
 from heputl import logging as heplog
 import random
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 
@@ -21,20 +22,25 @@ logger = heplog.get_logger(__name__)
 
 corrs_ll = lambda tmin,tmax,tstep: {f'corr {corr:.03f}': round(corr, 3) for corr in np.arange(tmin, tmax, tstep)}
 
-def plot_inputs(A_list, B_list, theta_list, plot_name='scatter_plot.png', fig_dir='results'):
-    num_plots = len(A_list)
-    fig, axs = plt.subplots(1, num_plots, figsize=(6*num_plots,8))
-    for i in range(num_plots):
-        axs[i].scatter(A_list[i], B_list[i])
-        axs[i].set_xlabel('A')
-        axs[i].set_ylabel('B')
-        axs[i].set_title(f'theta={theta_list[i]:.03f}')
-    plot_path = os.path.join(fig_dir, plot_name)
+def plot_inputs(A_list, B_list, t1_list, t2_list, plot_name='scatter_plot', fig_dir='results'):
+
+    num_rows_cols = int(np.sqrt(len(t1_list)))
+    fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(6*len(t1_list), 8*len(t2_list)))
+    
+    for i in range(num_rows_cols):
+        for j in range(num_rows_cols):
+            idx = i * num_rows_cols + j
+            axs[i, j].scatter(A_list[idx], B_list[idx])
+            axs[i, j].set_xlabel('A')
+            axs[i, j].set_ylabel('B')
+            axs[i, j].set_title(f'theta1={t1_list[idx]:.03f}, theta2={t2_list[idx]:.03f}')
+    
+    plot_path = os.path.join(fig_dir, plot_name+'.png')
     logger.info(f'saving plot to {plot_path}')
     plt.savefig(plot_path)
-    plt.show()
 
-def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram.png', fig_dir='results'):
+
+def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram', fig_dir='results'):
     num_plots = len(thetas)
     fig, axs = plt.subplots(1, num_plots, figsize=(6*num_plots,8))
     for i, (theta, theta_nominal) in enumerate(zip(thetas, thetas_nominal)):
@@ -43,40 +49,43 @@ def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram.png', fig_
         axs[i].set_xlabel('Theta')
         axs[i].set_ylabel('Frequency')
         axs[i].legend()
-    plot_path = os.path.join(fig_dir, plot_name)
+    plot_path = os.path.join(fig_dir, plot_name+'.png')
     logger.info(f'saving histogram plot to {plot_path}')
     plt.savefig(plot_path)
-    plt.show()
 
 
-
-def plot_results(result_ll, plot_name='mi_vs_theta.png', fig_dir='results.png', xlabel='Theta/noise level'):
+def plot_results(result_ll, plot_name='mi_vs_theta', fig_dir='results'):
 
     result_ll = np.array(result_ll)
-    result_ll = result_ll[result_ll[:, 0].argsort()]
-    thetas = result_ll[:,0]
-    train_mis = result_ll[:,1]
-    true_mis = result_ll[:,2]
 
-    plt.figure(figsize=(8,6))
-    plt.plot(thetas, train_mis, label='approx mi')
-    plt.plot(thetas, true_mis, label='true mi')
-    plt.legend()
-    plt.xlabel(xlabel)
-    plt.ylabel('Mutual Information')
-    plot_path = os.path.join(fig_dir, plot_name)
-    logger.info(f'saving plot to {plot_path}')
-    plt.savefig(plot_path)
-    plt.show()
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = result_ll[:, 0]
+    y = result_ll[:, 1]
+    z = result_ll[:, 2]
+
+    ax.plot_trisurf(x, y, z, cmap='viridis')
+
+    ax.set_xlabel('theta1: noise')
+    ax.set_ylabel('theta2: damp')
+    ax.set_zlabel('approx MI')
+
+    logger.info(f'saving results plot to {fig_dir}/{plot_name}')
+    plt.savefig(fig_dir + '/' + plot_name+'.png')
+
 
 
 def make_two_theta_grid(theta_min, theta_max, theta_num):
     t1 = np.linspace(theta_min, theta_max, theta_num)
-    t2 = np.linspace(1, 1+theta_max, theta_num)
+    t2 = np.linspace(1, theta_max, theta_num)
     random.shuffle(t1)
     random.shuffle(t2)
     tt1,tt2 = np.meshgrid(t1, t2)
     return tt1, tt2
+
+
+
 
 def main():
 
@@ -108,7 +117,7 @@ def main():
     B_N = 1
 
     # create model
-    model = modl.MI_Model(B_N=B_N, ctxt_N=1, acti=config['activation'], acti_out=config['activation_out'], ctxt_encoder_N=config['ctxt_enc_n'])
+    model = modl.MI_Model(B_N=B_N, ctxt_N=2, acti=config['activation'], acti_out=config['activation_out'], ctxt_encoder_N=config['ctxt_enc_n'])
     model.to(rtut.device)
 
     # create optimizer
@@ -124,19 +133,20 @@ def main():
 
     result_ll = []
 
-    data_dict = {'A_train': [], 'B_train': [], 'theta_train': []}
+    data_dict = {'A_train': [], 'B_train': [], 'tt1_train': [], 'tt2_train': []}
 
     for t1, t2 in zip(tt1.flatten(), tt2.flatten()):
         
         logger.info(f'generating data for t1: {t1:.03f}, t2: {t2:.03f}')
 
-        A_train, B_train, tt1_train, tt2_train, *_ = inge.generate_two_theta_noisy_samples(N=N_per_theta, t1_noise_nominal=t1, t2_damp_nominal=t2)
+        A_train, B_train, thetas_train, *_ = inge.generate_two_theta_noisy_samples(N=N_per_theta, t1_noise_nominal=t1, t2_damp_nominal=t2)
 
         data_dict['A_train'].append(A_train)
         data_dict['B_train'].append(B_train)
-        data_dict['theta_train'].append(theta_train)
+        data_dict['tt1_train'].append(thetas_train[:,0])
+        data_dict['tt2_train'].append(thetas_train[:,1])
 
-        dataset_train = dase.MinfDataset(A_var=A_train, B_var=B_train, thetas=theta_train)
+        dataset_train = dase.MinfDataset(A_var=A_train, B_var=B_train, thetas=thetas_train)
         train_dataloader = torch.utils.data.DataLoader(dataset_train, batch_size=config['batch_size'], shuffle=True)
 
         #****************************************#
@@ -148,63 +158,57 @@ def main():
         #****************************************#
         #              print results    
         # ****************************************#
-        logger.info(f'theta {thetas[i]:.03f}: \t train MI {train_acc_mi:.04f} \t true MI {train_true_mi:.04f}')    
-        result_ll.append([thetas[i], train_acc_mi, train_true_mi])
+        logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t train MI {train_acc_mi:.04f} \t true MI {train_true_mi:.04f}')    
+        result_ll.append([t1, t2, train_acc_mi, train_true_mi])
     
-    plot_inputs(data_dict['A_train'], data_dict['B_train'], thetas, plot_name='scatter_plot_inputs_train.png', fig_dir=result_dir)
+    plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train.png', fig_dir=result_dir)
     
-    xlabel = 'Theta/noise level' if config['theta_type'] == 'noise' else 'Theta/correlation'
-    plot_results(result_ll, plot_name='mi_vs_theta_train.png', fig_dir=result_dir, xlabel=xlabel)
-    plot_histogram(data_dict['theta_train'], thetas, plot_name='theta_train_histogram.png', fig_dir=result_dir)
+    xlabel = 'Theta/noise level' if 'noise' in config['theta_type'] else 'Theta/correlation'
+    plot_results(result_ll, plot_name='mi_vs_theta_train.png', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_train'], tt1.flatten(), plot_name='t1_train_histogram.png', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_train'], tt2.flatten(), plot_name='t2_train_histogram.png', fig_dir=result_dir)
 
+    result_ll = np.array(result_ll)
+    np.savez(os.path.join(result_dir, 'result_ll_train.npz'), theta1=result_ll[:, 0],theta2=result_ll[:, 1], mi=result_ll[:, 2])
 
     model_path = result_dir+'/disc_model'+datestr+'.pt'
     logger.info('saving model to ' + model_path)
     torch.save(model, model_path)
 
 
-    random.shuffle(thetas)
     N_per_theta = config['n_per_theta']
     result_ll = []
-
-    data_dict = {'A_test': [], 'B_test': [], 'theta_test': []}
-
-    for i,theta in enumerate(thetas):
-    
-        logger.info(f'generating data for theta {theta:.03f}')
-
-        if 'noise' in config['theta_type']:
-            if config['theta_type'] == 'noisesqr': theta = theta**2
-            A_test, B_test, theta_test, *_ = inge.generate_noisy_channel_samples(N=N_per_theta, noise_std_nominal=theta, train_test_split=None)
-        else:
-            A_test, B_test, *_ = inge.generate_random_variables(N=N_per_theta, corr=theta, train_test_split=None)
-            theta_test = np.random.normal(loc=theta, scale=0.1, size=A_test.shape)
-
+    tt1_test, tt2_test = make_two_theta_grid(config['theta_min'], config['theta_max'], config['theta_step'])
+    data_dict = {'A_test': [], 'B_test': [], 'tt1_test': [], 'tt2_test': []}
+    for t1, t2 in zip(tt1_test.flatten(), tt2_test.flatten()):
+        logger.info(f'generating data for t1: {t1:.03f}, t2: {t2:.03f}')
+        A_test, B_test, thetas_test, *_ = inge.generate_two_theta_noisy_samples(N=N_per_theta, t1_noise_nominal=t1, t2_damp_nominal=t2)
         data_dict['A_test'].append(A_test)
         data_dict['B_test'].append(B_test)
-        data_dict['theta_test'].append(theta_test)
-    
-        dataset_test = dase.MinfDataset(A_var=A_test, B_var=B_test, thetas=theta_test)
+        data_dict['tt1_test'].append(thetas_test[:, 0])
+        data_dict['tt2_test'].append(thetas_test[:, 1])
+
+        dataset_test = dase.MinfDataset(A_var=A_test, B_var=B_test, thetas=thetas_test)
         test_dataloader = torch.utils.data.DataLoader(dataset_test, batch_size=config['batch_size'], shuffle=False)
         #****************************************#
         #               test model
         #****************************************#
         test_acc_mi = modl.test(model, test_dataloader)
-        test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1,1), B_test)[0]
+        test_true_mi = feature_selection.mutual_info_regression(A_test.reshape(-1, 1), B_test)[0]
         wandb.log({"test mi": test_acc_mi})
-
         #****************************************#
         #              print results    
         # ****************************************#
-        logger.info(f'theta {thetas[i]:.03f}: \t test MI {test_acc_mi:.04f} \t true MI {test_true_mi:.04f}')    
-        result_ll.append([thetas[i], test_acc_mi, test_true_mi])
-    
-    plot_inputs(data_dict['A_test'], data_dict['B_test'], thetas, plot_name='scatter_plot_inputs_test.png', fig_dir=result_dir)
-    plot_results(result_ll,plot_name='mi_vs_theta_test.png',fig_dir=result_dir,xlabel=xlabel)
-    plot_histogram(data_dict['theta_test'], thetas, plot_name='theta_test_histogram.png', fig_dir=result_dir)
+        logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t test MI {test_acc_mi:.04f} \t true MI {test_true_mi:.04f}')    
+        result_ll.append([t1, t2, test_acc_mi, test_true_mi])
+
+    plot_inputs(data_dict['A_test'], data_dict['B_test'], tt1_test.flatten(), tt2_test.flatten(), plot_name='scatter_plot_inputs_test.png', fig_dir=result_dir)
+    plot_results(result_ll, plot_name='mi_vs_theta_test.png', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_test'], tt1_test.flatten(), plot_name='t1_test_histogram.png', fig_dir=result_dir)
+    plot_histogram(data_dict['tt2_test'], tt2_test.flatten(), plot_name='t2_test_histogram.png', fig_dir=result_dir)
 
     result_ll = np.array(result_ll)
-    np.savez(os.path.join(result_dir, 'result_ll.npz'), theta=result_ll[:, 0], mi=result_ll[:, 1])
+    np.savez(os.path.join(result_dir, 'result_ll_test.npz'), theta1=result_ll[:, 0],theta2=result_ll[:, 1], mi=result_ll[:, 2])
 
 
 if __name__ == "__main__":

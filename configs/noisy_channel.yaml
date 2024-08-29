@@ -1,5 +1,5 @@
-run_n : 12
-theta_type : noisesqr #corr # noise
+run_n : 13
+theta_type : noisetwo #noisesqr #corr # noise
 batch_size : 1024
 B_N : 1
 n_epochs : 90
@@ -7,7 +7,7 @@ lr : 0.0001
 activation : leaky
 activation_out : tanh
 ctxt_enc_n : null
-theta_min: -1.0
-theta_max: 1.0
-theta_step: 10
-n_per_theta: 300000
+theta_min: 0.1
+theta_max: 1.5
+theta_step: 4
+n_per_theta: 200000

@@ -246,5 +246,6 @@ def generate_two_theta_noisy_samples(N=int(1e5), t1_noise_nominal=0.1, t2_damp_n
     damp = np.abs(np.random.normal(t2_damp_nominal,0.05,N)).astype(np.float32)
 
     out_sig = in_sig + noise - np.log(damp)*in_sig
+    thetas = np.concatenate((noise_std.reshape(-1, 1), damp.reshape(-1, 1)), axis=1)
 
-    return in_sig[:idx], out_sig[:idx], noise_std[:idx], damp[:idx], in_sig[idx:], out_sig[idx:], noise_std[idx:], damp[idx:]
+    return in_sig[:idx], out_sig[:idx], thetas[:idx], in_sig[idx:], out_sig[idx:], thetas[idx:]
