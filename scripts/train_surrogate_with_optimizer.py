@@ -43,10 +43,10 @@ args = parser.parse_args()
 
 logger.info('setting up surrogate model')
 
-surrogate = surr.MLP_Surrogate()
+surrogate = surr.MLP_Surrogate(N_feat=2)
 
 metric = nn.MSELoss()
-optimizer = optim.Adam(surrogate.parameters(), lr=0.01)
+optimizer = optim.Adam(surrogate.parameters(), lr=0.05)
 
 
 #****************************************************************#
@@ -54,15 +54,17 @@ optimizer = optim.Adam(surrogate.parameters(), lr=0.01)
 #****************************************************************#
 
 # load minf results
-exp_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/20240828_run12'
+exp_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/20240829_run13'
 logger.info('loading data from ' + exp_dir)
-result_ll = np.load(exp_dir+'/result_ll.npz')
+result_ll = np.load(exp_dir+'/result_ll_train.npz')
 
 # create surrogate dataset
-dataset = dase.SurrDataset(result_ll['theta'], result_ll['mi'])
+thetas = np.column_stack((result_ll['theta1'], result_ll['theta2']))
+dataset = dase.SurrDataset(thetas, result_ll['mi'])
 
 
-plot_theta_vs_mi(result_ll['theta'], result_ll['mi'])
+plot_theta_vs_mi(result_ll['theta1'], result_ll['mi'], plot_name='theta1_vs_mi', fig_dir=exp_dir)
+plot_theta_vs_mi(result_ll['theta2'], result_ll['mi'], plot_name='theta2_vs_mi', fig_dir=exp_dir)
 
 # define data loader
 batch_size = 256
@@ -74,7 +76,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle
 
 logger.info('training surrogate model')
 
-n_epochs = 1000
+n_epochs = 500
 for epoch in range(n_epochs):
     for i, batch in enumerate(dataloader):
         theta, mi = batch
@@ -94,10 +96,11 @@ thetas = surr_optimizer.optimize()
 
 # get mutual information for thetas
 
-thetas = torch.tensor(thetas).reshape(-1, 1)
+thetas = torch.tensor(thetas)
 mis = surrogate(thetas)
 
 thetas_np = thetas.detach().numpy().squeeze()
 mis_np = mis.detach().numpy().squeeze()
 
-plot_theta_vs_mi(thetas_np, mis_np, scatter_thetas=True, plot_name='theta_vs_mi_descent', fig_dir=exp_dir)
+plot_theta_vs_mi(thetas_np[:,0], mis_np, scatter_thetas=True, plot_name='theta1_vs_mi_descent', fig_dir=exp_dir)
+plot_theta_vs_mi(thetas_np[:,1], mis_np, scatter_thetas=True, plot_name='theta2_vs_mi_descent', fig_dir=exp_dir)

@@ -44,7 +44,9 @@ class InfinityMinfDataset(Dataset):
 class SurrDataset(Dataset):
     
     def __init__(self, theta, mi):
-        self.theta = torch.tensor(theta.astype(np.float32).reshape(-1, 1))
+        if len(theta.shape) == 1:
+            theta = theta.reshape(-1, 1)
+        self.theta = torch.tensor(theta.astype(np.float32))
         self.mi = torch.tensor(mi.astype(np.float32).reshape(-1, 1))
     
     def __len__(self):
