@@ -48,3 +48,34 @@ class Optimizer():
         return thetas
 
 
+class Flow_Optimizer(Optimizer):
+
+    def optimize(self, N=100):
+
+        self.surrogate.eval()
+        thetas = []
+
+        for epoch in range(self.epoch_n):
+
+            thetas.append(self.theta.clone().detach().numpy())
+
+            self.optimizer.zero_grad
+        
+            mi_hat, _ = self.surrogate.sample(N,self.theta)
+
+            loss = -mi_hat.mean()
+
+            loss.backward()
+            self.optimizer.step()
+
+            theta_curr = self.theta.clone().detach().numpy()
+            if ((theta_curr - thetas[-1])**2).sum() < 1e-5:
+                break
+            if not self.is_local(theta_curr):
+                break  
+            
+            logger.info(f'epoch {epoch}, mi {mi_hat.item():.04f}, theta {theta_curr}')
+            
+        
+        return thetas
+    

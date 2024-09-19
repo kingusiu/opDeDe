@@ -30,7 +30,6 @@ class MLP_Surrogate(nn.Module):
         return x
 
 
-# START_MODEL
 class PiecewiseLinear(nn.Module):
     def __init__(self, n_conditions, xmin=0., xmax=20, nb=1000):
         super().__init__()
@@ -109,6 +108,28 @@ class Flow_Surrogate(nf.ConditionalNormalizingFlow):
 
     def __init__(self, data_dim, ctxt_dim, nodes_n=128, layers_n=3, K=8, tail_bound=3.5):
 
+        flows = []
+
+        for i in range(K):
+            # MADE                                            
+            flows += [nf.flows.AutoregressiveRationalQuadraticSpline(data_dim, layers_n, nodes_n, 
+                                                                    num_context_channels=ctxt_dim, tail_bound=tail_bound)]
+            flows += [nf.flows.LULinearPermute(data_dim)]
+
+        # context encoder
+        context_encoder = torch.nn.Sequential(
+                    torch.nn.Linear(ctxt_dim, 16),
+                    torch.nn.ReLU(),
+                    torch.nn.Linear(16, 16),
+                    torch.nn.ReLU(),
+                    torch.nn.Linear(16, data_dim * 2),
+                )
+
+        # Set base distribution
+        q0 = nf.distributions.base.ConditionalDiagGaussian(data_dim, context_encoder=context_encoder)
+        
+        super().__init__(q0, flows)
+
         # FLOW MODEL
         self.K = K
 
@@ -117,26 +138,6 @@ class Flow_Surrogate(nf.ConditionalNormalizingFlow):
         self.nodes_n = nodes_n
         self.layers_n = layers_n
         self.tail_bound = tail_bound
-
-        flows = []
-
-        for i in range(K):
-            # MADE                                            
-            flows += [nf.flows.AutoregressiveRationalQuadraticSpline(self.data_dim, self.layers_n, self.nodes_n, 
-                                                                    num_context_channels=self.ctxt_dim, tail_bound=self.tail_bound)]
-            flows += [nf.flows.LULinearPermute(self.data_dim)]
-
-        # context encoder
-        self.context_encoder = torch.nn.Sequential(
-                    torch.nn.Linear(self.ctxt_dim, 16),
-                    torch.nn.ReLU(),
-                    torch.nn.Linear(16, 16),
-                    torch.nn.ReLU(),
-                    torch.nn.Linear(16, self.data_dim * 2),
-                )
-
-        # Set base distribution
-        q0 = nf.distributions.base.ConditionalDiagGaussian(self.data_dim, context_encoder=self.context_encoder)
-        
-        super(Flow_Surrogate).__init__(q0, flows)
+        self.context_encoder = context_encoder
+        self.q0 = q0
     

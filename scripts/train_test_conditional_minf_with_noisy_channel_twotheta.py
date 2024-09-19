@@ -161,12 +161,12 @@ def main():
         logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t train MI {train_acc_mi:.04f} \t true MI {train_true_mi:.04f}')    
         result_ll.append([t1, t2, train_acc_mi, train_true_mi])
     
-    plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train.png', fig_dir=result_dir)
+    plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train', fig_dir=result_dir)
     
     xlabel = 'Theta/noise level' if 'noise' in config['theta_type'] else 'Theta/correlation'
-    plot_results(result_ll, plot_name='mi_vs_theta_train.png', fig_dir=result_dir)
-    plot_histogram(data_dict['tt1_train'], tt1.flatten(), plot_name='t1_train_histogram.png', fig_dir=result_dir)
-    plot_histogram(data_dict['tt1_train'], tt2.flatten(), plot_name='t2_train_histogram.png', fig_dir=result_dir)
+    plot_results(result_ll, plot_name='mi_vs_theta_train', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_train'], tt1.flatten(), plot_name='t1_train_histogram', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_train'], tt2.flatten(), plot_name='t2_train_histogram', fig_dir=result_dir)
 
     result_ll = np.array(result_ll)
     np.savez(os.path.join(result_dir, 'result_ll_train.npz'), theta1=result_ll[:, 0],theta2=result_ll[:, 1], mi=result_ll[:, 2])
@@ -202,10 +202,10 @@ def main():
         logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t test MI {test_acc_mi:.04f} \t true MI {test_true_mi:.04f}')    
         result_ll.append([t1, t2, test_acc_mi, test_true_mi])
 
-    plot_inputs(data_dict['A_test'], data_dict['B_test'], tt1_test.flatten(), tt2_test.flatten(), plot_name='scatter_plot_inputs_test.png', fig_dir=result_dir)
-    plot_results(result_ll, plot_name='mi_vs_theta_test.png', fig_dir=result_dir)
-    plot_histogram(data_dict['tt1_test'], tt1_test.flatten(), plot_name='t1_test_histogram.png', fig_dir=result_dir)
-    plot_histogram(data_dict['tt2_test'], tt2_test.flatten(), plot_name='t2_test_histogram.png', fig_dir=result_dir)
+    plot_inputs(data_dict['A_test'], data_dict['B_test'], tt1_test.flatten(), tt2_test.flatten(), plot_name='scatter_plot_inputs_test', fig_dir=result_dir)
+    plot_results(result_ll, plot_name='mi_vs_theta_test', fig_dir=result_dir)
+    plot_histogram(data_dict['tt1_test'], tt1_test.flatten(), plot_name='t1_test_histogram', fig_dir=result_dir)
+    plot_histogram(data_dict['tt2_test'], tt2_test.flatten(), plot_name='t2_test_histogram', fig_dir=result_dir)
 
     result_ll = np.array(result_ll)
     np.savez(os.path.join(result_dir, 'result_ll_test.npz'), theta1=result_ll[:, 0],theta2=result_ll[:, 1], mi=result_ll[:, 2])
