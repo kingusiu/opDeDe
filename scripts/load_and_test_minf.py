@@ -8,7 +8,7 @@ from minfnet.dats import datasets as dase
 from minfnet.dats import input_generator as inge
 import yaml
 import minfnet.util.runtime_util as rtut
-from minfnet.ml import mime as modl
+from minfnet.ml import mime_cond as modl
 from sklearn import feature_selection
 
 

@@ -5,7 +5,7 @@ from heputl import logging as heplog
 
 from minfnet.dats import datasets as dase
 from minfnet.dats import input_generator as inge
-from minfnet.ml import mime as modl
+from minfnet.ml import mime_cond as modl
 import yaml
 import minfnet.util.runtime_util as rtut
 
