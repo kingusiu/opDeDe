@@ -10,7 +10,7 @@ from minfnet.dats import input_generator as inge
 from minfnet.util import runtime_util as ruti
 from minfnet.util string_constants as stco
 from minfnet.util import math_util as maut
-from minfnet.ml import mime as modl
+from minfnet.ml import mime_cond as modl
 
 
 
