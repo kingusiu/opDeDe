@@ -10,6 +10,7 @@ class Optimizer():
     def __init__(self, surr_dataset, surrogate, step_sz=8e-1, lr=0.01, epoch_n=30):
         self.theta = surr_dataset.theta[np.random.randint(len(surr_dataset.theta))]
         self.surrogate = surrogate
+        self.theta_ini = self.theta.clone().detach().numpy()
         self.theta_bounds = [np.min(surr_dataset.theta.clone().numpy(), axis=0), \
                               np.max(surr_dataset.theta.clone().numpy(), axis=0)] # [min_t1, min_t2], [max_t1, max_t2]
         self.step_sz = step_sz
@@ -18,7 +19,9 @@ class Optimizer():
         self.epoch_n = epoch_n
 
     def is_local(self,last_theta):
-        return np.all(last_theta >= self.theta_bounds[0]*0.9) and np.all(last_theta <= self.theta_bounds[1]*1.1)
+        diff = parameters - self.nominal_parameters
+        return np.dot(diff, np.dot(np.linalg.inv(self.box_covariance), diff)) < scaler
+        # return np.all(last_theta >= self.theta_bounds[0]*0.9) and np.all(last_theta <= self.theta_bounds[1]*1.1)
 
     def optimize(self):
   
