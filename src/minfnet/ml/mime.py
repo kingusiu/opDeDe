@@ -34,17 +34,21 @@ class MI_Model(nn.Module):
             nn.Linear(32, encoder_N), acti_dd[acti],
         )
 
-        self.fully_connected = nn.Sequential(
-            nn.Linear(256, 200),
-            nn.ReLU(),
-            nn.Linear(200, 1)
-        )
+        connected_mlp = []
+        connected_mlp.append(nn.Linear(encoder_N*2, 200))
+        connected_mlp.append(acti_dd[acti])
+        connected_mlp.append(nn.Linear(200, 1))
+        if acti_out is not None:
+            connected_mlp.append(acti_dd[acti_out])
+
+        self.fully_connected = nn.Sequential(*connected_mlp)
 
     def forward(self, a, b):
         a = self.features_a(a).view(a.size(0), -1)
         b = self.features_b(b).view(b.size(0), -1)
         x = torch.cat((a, b), 1) # first dimension is batch-dimension
         return self.fully_connected(x)
+
 
 
 def mutual_info(dep_ab, indep_ab, eps=1e-8):
