@@ -1,4 +1,4 @@
-run_n : 13
+run_n : 14
 theta_type : noisetwo #noisesqr #corr # noise
 batch_size : 1024
 B_N : 1
