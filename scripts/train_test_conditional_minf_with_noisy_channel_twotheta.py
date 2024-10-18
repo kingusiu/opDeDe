@@ -22,59 +22,6 @@ logger = heplog.get_logger(__name__)
 
 corrs_ll = lambda tmin,tmax,tstep: {f'corr {corr:.03f}': round(corr, 3) for corr in np.arange(tmin, tmax, tstep)}
 
-def plot_inputs(A_list, B_list, t1_list, t2_list, plot_name='scatter_plot', fig_dir='results'):
-
-    num_rows_cols = int(np.sqrt(len(t1_list)))
-    fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(6*len(t1_list), 8*len(t2_list)))
-    
-    for i in range(num_rows_cols):
-        for j in range(num_rows_cols):
-            idx = i * num_rows_cols + j
-            axs[i, j].scatter(A_list[idx], B_list[idx])
-            axs[i, j].set_xlabel('A')
-            axs[i, j].set_ylabel('B')
-            axs[i, j].set_title(f'theta1={t1_list[idx]:.03f}, theta2={t2_list[idx]:.03f}')
-    
-    plot_path = os.path.join(fig_dir, plot_name+'.png')
-    logger.info(f'saving plot to {plot_path}')
-    plt.savefig(plot_path)
-
-
-def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram', fig_dir='results'):
-    num_plots = len(thetas)
-    fig, axs = plt.subplots(1, num_plots, figsize=(6*num_plots,8))
-    for i, (theta, theta_nominal) in enumerate(zip(thetas, thetas_nominal)):
-        axs[i].hist(theta, bins=50, alpha=0.5, label='theta distribution')
-        axs[i].axvline(x=theta_nominal, color='red', linestyle='--', label=f'theta={theta_nominal:.03f}')
-        axs[i].set_xlabel('Theta')
-        axs[i].set_ylabel('Frequency')
-        axs[i].legend()
-    plot_path = os.path.join(fig_dir, plot_name+'.png')
-    logger.info(f'saving histogram plot to {plot_path}')
-    plt.savefig(plot_path)
-
-
-def plot_results(result_ll, plot_name='mi_vs_theta', fig_dir='results'):
-
-    result_ll = np.array(result_ll)
-
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-
-    x = result_ll[:, 0]
-    y = result_ll[:, 1]
-    z = result_ll[:, 2]
-
-    ax.plot_trisurf(x, y, z, cmap='viridis')
-
-    ax.set_xlabel('theta1: noise')
-    ax.set_ylabel('theta2: damp')
-    ax.set_zlabel('approx MI')
-
-    logger.info(f'saving results plot to {fig_dir}/{plot_name}')
-    plt.savefig(fig_dir + '/' + plot_name+'.png')
-
-
 
 def make_two_theta_grid(theta_min, theta_max, theta_num):
     t1 = np.linspace(theta_min, theta_max, theta_num)

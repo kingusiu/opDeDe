@@ -1,6 +1,6 @@
 import math
 import sys
-import torch, torchvision
+import torch
 from torch import nn
 import torch.nn.functional as F
 import wandb
