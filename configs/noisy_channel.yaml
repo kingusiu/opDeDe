@@ -10,4 +10,4 @@ ctxt_enc_n : null
 theta_min: 0.1
 theta_max: 1.5
 theta_step: 4
-n_per_theta: 20000
+n_per_theta: 2000

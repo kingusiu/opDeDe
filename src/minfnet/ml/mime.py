@@ -68,7 +68,7 @@ def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
         
         for batch in dataloader:
             
-            batch_a, batch_b, batch_br, _ = [b.to(rtut.device) for b in batch]
+            batch_a, batch_b, batch_br = [b.to(rtut.device) for b in batch]
 
             # apply the model: pass a & b and a & b_permuted
             dep_ab = model(batch_a, batch_b)

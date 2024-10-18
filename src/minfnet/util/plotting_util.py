@@ -109,7 +109,26 @@ def animate_multimod_vs_mi(result_path,exclude_last=False):
     animObj.save(ff, writer=writergif)
 
 
-def plot_inputs(A_list, B_list, t1_list, t2_list, plot_name='scatter_plot', fig_dir='results'):
+def plot_inputs_one_theta(A_list, B_list, thetas, plot_name='scatter_plot', fig_dir='results'):
+
+    num_cols = len(thetas)
+    fig, axs = plt.subplots(1, num_cols, figsize=(5*num_cols, 5))
+    
+    for i in range(num_cols):
+        axs[i].scatter(A_list[i], B_list[i], marker='.', s=12)
+        axs[i].set_aspect(1./axs[i].get_data_ratio())
+        # axs[i].set_aspect('equal', adjustable='box')  # Set equal aspect ratio
+        axs[i].set_xlabel('sensor energy')
+        axs[i].set_ylabel('true energy')
+        axs[i].set_title(f'theta={thetas[i]:.03f}')
+        #plt.axis('square') 
+    
+    plot_path = os.path.join(fig_dir, plot_name+'.png')
+    logger.info(f'saving plot to {plot_path}')
+    plt.savefig(plot_path)
+    plt.close(fig)
+
+def plot_inputs_two_theta(A_list, B_list, t1_list, t2_list, plot_name='scatter_plot', fig_dir='results'):
 
     num_rows_cols = int(np.sqrt(len(t1_list)))
     fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(6*len(t1_list), 8*len(t2_list)))
@@ -141,7 +160,31 @@ def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram', fig_dir=
     plt.savefig(plot_path)
 
 
-def plot_results(result_ll, plot_name='mi_vs_theta', fig_dir='results'):
+def plot_theta_vs_mi(theta, mi, truth=None, scatter_thetas=False, plot_name=None, fig_dir=None):
+    # plot theta vs mi
+    sorted_indices = np.argsort(theta)
+    sorted_theta = theta[sorted_indices]
+    sorted_mi = mi[sorted_indices]
+    if truth is not None:
+        sorted_truth = truth[sorted_indices]
+
+    plt.figure(figsize=(7, 7))
+    plt.plot(sorted_theta, sorted_mi, label='mime')
+    if truth is not None:
+        plt.plot(sorted_theta, sorted_truth, label='true mi')
+    if scatter_thetas:
+        plt.scatter(sorted_theta, sorted_mi, color='red', marker='>')
+    plt.xlabel('Theta')
+    plt.ylabel('MI')
+    plt.title('Theta vs MI')
+    plt.legend()
+    if plot_name is not None and fig_dir is not None:
+        plt.savefig(f'{fig_dir}/{plot_name}.png')
+    # plt.show()
+    plt.close()
+
+
+def plot_results_two_theta(result_ll, plot_name='mi_vs_theta', fig_dir='results'):
 
     result_ll = np.array(result_ll)
 

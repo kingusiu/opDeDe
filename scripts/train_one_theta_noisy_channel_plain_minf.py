@@ -9,23 +9,25 @@ from heputl import logging as heplog
 
 from minfnet.dats import input_generator as inge
 from minfnet.dats import datasets as dase
-from minfnet.ml import mime_cond as modl
+from minfnet.ml import mime as modl
 from minfnet.util import runtime_util as rtut
+from minfnet.util import plotting_util as plut
+
 
 logger = heplog.get_logger(__name__)
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
-        #****************************************#
+    #****************************************#
     #    runtime params
     #****************************************#
 
-    config_path = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/configs/noisy_channel.yaml'
+    config_path = '/home/users/w/wozniak/dev/opde/minf/opDeDe/configs/noisy_channel.yaml'
     with open(config_path, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     datestr = datetime.datetime.now().strftime('%Y%m%d') + '_run' + str(config['run_n'])
-    result_dir = '/afs/cern.ch/user/k/kiwoznia/opde/opDeDe/results/noisy_channel_test/' + datestr
+    result_dir = '/home/users/w/wozniak/dev/opde/minf/opDeDe/results/noisy_channel_test/' + datestr
     os.makedirs(result_dir, exist_ok=True)
 
     # Save config file
@@ -38,14 +40,12 @@ if __name__ == 'main':
     wandb.init(project="minfnet")
 
     #****************************************#
-    #               build model 
+    #              nominal theta loop   
     #****************************************#
 
     B_N = 1
 
-    #****************************************#
-    #              nominal theta loop   
-    #****************************************#
+    result_ll = []
 
     thetas = np.linspace(config['theta_min'],config['theta_max'],config['theta_step'])
 
@@ -67,7 +67,7 @@ if __name__ == 'main':
         data_dict['B_train'].append(B_train)
         data_dict['theta_train'].append(theta_train)
 
-        dataset_train = dase.MinfDataset(A_var=A_train, B_var=B_train, thetas=theta_train)
+        dataset_train = dase.MinfDataset(A_var=A_train, B_var=B_train)
         train_dataloader = torch.utils.data.DataLoader(dataset_train, batch_size=config['batch_size'], shuffle=True)
 
         #****************************************#
@@ -89,15 +89,20 @@ if __name__ == 'main':
         train_mi = modl.train(model, train_dataloader, config['n_epochs'], optimizer)
         true_mi = feature_selection.mutual_info_regression(A_train.reshape(-1,1), B_train)[0]
 
+        # Compute square root error between train MI and true MI
+        sqrt_error = np.sqrt((train_mi - true_mi) ** 2)
+        logger.info(f'theta {theta:.03f}: \t sqrt error {sqrt_error:.04f}')
+
         #****************************************#
         #              print results    
         # ****************************************#
-        logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t train MI {train_mi:.04f} \t true MI {true_mi:.04f}')    
-        result_ll.append([t1, t2, train_mi, true_mi])
+        logger.info(f'theta {theta:.03f}: \t train MI {train_mi:.04f} \t true MI {true_mi:.04f}')    
+        result_ll.append([theta, train_mi, true_mi])
+
+    result_ll = np.array(result_ll)
     
-    plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train', fig_dir=result_dir)
+    plut.plot_inputs_one_theta(data_dict['A_train'], data_dict['B_train'], thetas, plot_name='scatter_plot_inputs_train', fig_dir=result_dir)
     
-    xlabel = 'Theta/noise level' if 'noise' in config['theta_type'] else 'Theta/correlation'
-    plot_results(result_ll, plot_name='mi_vs_theta_train', fig_dir=result_dir)
+    plut.plot_theta_vs_mi(theta=result_ll[:,0],mi=result_ll[:,1], truth=result_ll[:,2], plot_name='mi_vs_theta_train', fig_dir=result_dir)
 
 

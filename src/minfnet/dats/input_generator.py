@@ -164,7 +164,7 @@ def read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=
 # y ... deposited energy
 ###############################################
 
-def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list = [0.0, 0.0], stds: list = [1.0, 1.0], train_test_split: float | None = None):
+def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list = [0.0, 0.0], stds: list = [1.0, 1.0], train_test_split: float | None = None):  
 
     train_test_split = calc_train_test_split_N(N,train_test_split)
 
