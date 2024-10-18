@@ -4,19 +4,30 @@ from torch.utils.data import Dataset
 
 class MinfDataset(Dataset):
 
-    def __init__(self, A_var, B_var, thetas):
+    def __init__(self, A_var, B_var):
         self.A = torch.tensor(A_var.reshape(-1, 1), dtype=torch.float32)
         self.B = torch.tensor(B_var.reshape(-1, 1), dtype=torch.float32)
-        if len(thetas.shape) == 1:
-            thetas = thetas.reshape(-1, 1)
-        self.thetas = torch.tensor(thetas, dtype=torch.float32)
         self.B_perm = self.B[torch.randperm(len(self.B))]
 
     def __len__(self):
         return len(self.A)
     
     def __getitem__(self, idx):
-        return self.A[idx], self.B[idx], self.B_perm[idx], self.thetas[idx]
+        return self.A[idx], self.B[idx], self.B_perm[idx]
+
+
+class MinfCondDataset(MinfDataset):
+
+    def __init__(self, A_var, B_var, thetas):
+        super().__init__(A_var, B_var)
+        if len(thetas.shape) == 1:
+            thetas = thetas.reshape(-1, 1)
+        self.thetas = torch.tensor(thetas, dtype=torch.float32)
+
+    def __getitem__(self, idx):
+        A, B, B_perm = super().__getitem__(idx)
+        return A, B, B_perm, self.thetas[idx]
+
 
 
 class InfinityMinfDataset(Dataset):
