@@ -11,6 +11,8 @@ from minfnet.dats import datasets as dase
 from minfnet.ml import mime_cond as modl
 from minfnet.util import runtime_util as rtut
 from minfnet.util import string_constants as stco
+from minfnet.util import data_util as daut
+from minfnet.util import plotting_util as plut
 
 from heputl import logging as heplog
 import random
@@ -21,17 +23,6 @@ import matplotlib.pyplot as plt
 logger = heplog.get_logger(__name__)
 
 corrs_ll = lambda tmin,tmax,tstep: {f'corr {corr:.03f}': round(corr, 3) for corr in np.arange(tmin, tmax, tstep)}
-
-
-def make_two_theta_grid(theta_min, theta_max, theta_num):
-    t1 = np.linspace(theta_min, theta_max, theta_num)
-    t2 = np.linspace(1, theta_max, theta_num)
-    random.shuffle(t1)
-    random.shuffle(t2)
-    tt1,tt2 = np.meshgrid(t1, t2)
-    return tt1, tt2
-
-
 
 
 def main():
@@ -76,7 +67,7 @@ def main():
     #****************************************#
     N_per_theta = config['n_per_theta']
 
-    tt1, tt2 = make_two_theta_grid(config['theta_min'],config['theta_max'],config['theta_step'])
+    tt1, tt2 = daut.make_two_theta_grid(config['theta_min'],config['theta_max'],config['theta_step'])
 
     result_ll = []
 
@@ -108,12 +99,11 @@ def main():
         logger.info(f'theta1 {t1:.03f} / theta2 {t2:.03f}: \t train MI {train_acc_mi:.04f} \t true MI {train_true_mi:.04f}')    
         result_ll.append([t1, t2, train_acc_mi, train_true_mi])
     
-    plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train', fig_dir=result_dir)
+    plut.plot_inputs(data_dict['A_train'], data_dict['B_train'], tt1.flatten(), tt2.flatten(), plot_name='scatter_plot_inputs_train', fig_dir=result_dir)
     
-    xlabel = 'Theta/noise level' if 'noise' in config['theta_type'] else 'Theta/correlation'
-    plot_results(result_ll, plot_name='mi_vs_theta_train', fig_dir=result_dir)
-    plot_histogram(data_dict['tt1_train'], tt1.flatten(), plot_name='t1_train_histogram', fig_dir=result_dir)
-    plot_histogram(data_dict['tt1_train'], tt2.flatten(), plot_name='t2_train_histogram', fig_dir=result_dir)
+    plut.plot_results(result_ll, plot_name='mi_vs_theta_train', fig_dir=result_dir)
+    plut.plot_histogram(data_dict['tt1_train'], tt1.flatten(), plot_name='t1_train_histogram', fig_dir=result_dir)
+    plut.plot_histogram(data_dict['tt1_train'], tt2.flatten(), plot_name='t2_train_histogram', fig_dir=result_dir)
 
     result_ll = np.array(result_ll)
     np.savez(os.path.join(result_dir, 'result_ll_train.npz'), theta1=result_ll[:, 0],theta2=result_ll[:, 1], mi=result_ll[:, 2])
@@ -125,7 +115,7 @@ def main():
 
     N_per_theta = config['n_per_theta']
     result_ll = []
-    tt1_test, tt2_test = make_two_theta_grid(config['theta_min'], config['theta_max'], config['theta_step'])
+    tt1_test, tt2_test = daut.make_two_theta_grid(config['theta_min'], config['theta_max'], config['theta_step'])
     data_dict = {'A_test': [], 'B_test': [], 'tt1_test': [], 'tt2_test': []}
     for t1, t2 in zip(tt1_test.flatten(), tt2_test.flatten()):
         logger.info(f'generating data for t1: {t1:.03f}, t2: {t2:.03f}')

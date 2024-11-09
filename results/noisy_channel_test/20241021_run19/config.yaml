@@ -1,0 +1,13 @@
+B_N: 1
+activation: leaky
+activation_out: tanh
+batch_size: 2048
+ctxt_enc_n: null
+lr: 0.0001
+n_epochs: 200
+n_per_theta: 20000
+run_n: 19
+theta_max: 2.2
+theta_min: 0.2
+theta_num: 4
+theta_type: noisetwo

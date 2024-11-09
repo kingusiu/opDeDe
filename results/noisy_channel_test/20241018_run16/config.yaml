@@ -6,8 +6,8 @@ ctxt_enc_n: null
 lr: 0.0001
 n_epochs: 100
 n_per_theta: 20000
-run_n: 14
+run_n: 16
 theta_max: 1.5
 theta_min: 0.1
-theta_step: 4
+theta_num: 6
 theta_type: noise

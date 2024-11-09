@@ -4,10 +4,10 @@ activation_out: tanh
 batch_size: 1024
 ctxt_enc_n: null
 lr: 0.0001
-n_epochs: 100
+n_epochs: 200
 n_per_theta: 20000
-run_n: 14
-theta_max: 1.5
-theta_min: 0.1
-theta_step: 4
-theta_type: noise
+run_n: 17
+theta_max: 0.9
+theta_min: -0.9
+theta_num: 7
+theta_type: corr

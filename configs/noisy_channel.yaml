@@ -1,13 +1,13 @@
-run_n : 14
-theta_type : noise #noisetwo #noisesqr #corr # noise
-batch_size : 1024
+run_n : 21
+theta_type : noisetwo #noisetwo #noisesqr #corr # noise
+batch_size : 512
 B_N : 1
-n_epochs : 90
+n_epochs : 200
 lr : 0.0001
 activation : leaky
 activation_out : tanh
 ctxt_enc_n : null
-theta_min: 0.1
-theta_max: 1.5
-theta_step: 4
-n_per_theta: 2000
+theta_min: 0.2
+theta_max: 2.2
+theta_num: 5
+n_per_theta: 30000

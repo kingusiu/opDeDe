@@ -5,6 +5,8 @@ import numpy as np
 import scipy.stats
 from scipy.stats import multivariate_normal
 
+from typing import Union
+
 from minfnet.util import runtime_util as rtut
 # import src.util.runtime_util as rtut
 
@@ -164,7 +166,7 @@ def read_photon_hadron_dataframe(file_path_photons, file_path_hadrons, N_layers=
 # y ... deposited energy
 ###############################################
 
-def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list = [0.0, 0.0], stds: list = [1.0, 1.0], train_test_split: float | None = None):  
+def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list = [0.0, 0.0], stds: list = [1.0, 1.0], train_test_split= None):  
 
     train_test_split = calc_train_test_split_N(N,train_test_split)
 
@@ -182,7 +184,7 @@ def generate_random_variables(corr: float = 0., N: int = int(1e5), means: list =
 # y ... deposited energy
 ##############################################################
 
-def samples_from_multivariate_multimodal_gaussian(mus: list | np.ndarray, covs: list | np.ndarray, N_samples: int = 100) -> np.ndarray:
+def samples_from_multivariate_multimodal_gaussian(mus: Union[list,np.ndarray], covs: Union[list,np.ndarray], N_samples: int = 100) -> np.ndarray:
 
     # set up distribution
 

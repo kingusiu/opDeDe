@@ -6,6 +6,9 @@ import torch.nn.functional as F
 import wandb
 import minfnet.util.runtime_util as rtut
 
+from heputl import logging as heplog
+
+logger = heplog.get_logger(__name__)
 
 ##################################
 #               model
@@ -16,13 +19,13 @@ acti_dd = { 'relu': nn.ReLU(), 'tanh': nn.Tanh(), 'sigmoid': nn.Sigmoid(), 'elu'
 
 class MI_Model(nn.Module):
 
-    def __init__(self, B_N, encoder_N=128, acti='relu', acti_out=None):
+    def __init__(self, B_N, A_N=1, encoder_N=128, acti='relu', acti_out=None):
 
         super(MI_Model, self).__init__()
 
         # encoder for variable of interest / target (e.g. true energy)
         self.features_a = nn.Sequential(
-            nn.Linear(1, 32), acti_dd[acti],
+            nn.Linear(A_N, 32), acti_dd[acti],
             nn.Linear(32, 32), acti_dd[acti],
             nn.Linear(32, encoder_N), acti_dd[acti],
         )
@@ -55,8 +58,13 @@ def mutual_info(dep_ab, indep_ab, eps=1e-8):
 
     return dep_ab.mean() - torch.log(indep_ab.exp().mean()+eps) # means over batch
 
+def get_dep_indep_batch(batch):
 
-def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
+    batch_a, batch_b, batch_br = [b.to(rtut.device) for b in batch]
+
+    return (batch_a, batch_b), (batch_a, batch_br)
+
+def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8, wandb_log=False):
 
     model.train()
 
@@ -68,11 +76,11 @@ def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
         
         for batch in dataloader:
             
-            batch_a, batch_b, batch_br = [b.to(rtut.device) for b in batch]
+            dep_batch, indep_batch = get_dep_indep_batch(batch)
 
             # apply the model: pass a & b and a & b_permuted
-            dep_ab = model(batch_a, batch_b)
-            indep_ab = model(batch_a, batch_br)
+            dep_ab = model(*dep_batch)
+            indep_ab = model(*indep_batch)
 
             mi = mutual_info(dep_ab=dep_ab, indep_ab=indep_ab, eps=eps)
             loss = -mi
@@ -86,10 +94,11 @@ def train(model: MI_Model, dataloader, nb_epochs, optimizer, eps=1e-8):
         acc_mi /= len(dataloader)  # mi per batch
         acc_mi /= math.log(2)
         
-        wandb.log({"epoch": e, "mi": acc_mi})
-        train_mi.append(acc_mi)
-        print(f'{e+1} {acc_mi:.04f}')
-        sys.stdout.flush()
+        if wandb_log:
+            wandb.log({"epoch": e, "mi": acc_mi})
+        elif e % 20 == 0:
+            logger.info(f'epoch {e}: mi {acc_mi:.04f}')
+        train_mi.append(acc_mi) # train-mi per epoch
 
     return acc_mi
 

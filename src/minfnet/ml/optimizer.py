@@ -7,19 +7,25 @@ logger = heplog.get_logger(__name__)
 
 class Optimizer():
 
-    def __init__(self, surr_dataset, surrogate, step_sz=8e-1, lr=0.01, epoch_n=30):
+    def __init__(self, surr_dataset, surrogate, theta_nominal, box_covariance=None, step_sz=8e-1, lr=0.01, epoch_n=30):
+
+        self.theta_nominal = theta_nominal
+        # pick a random theta from the grid and start with it
         self.theta = surr_dataset.theta[np.random.randint(len(surr_dataset.theta))]
+        self.theta.requires_grad_()
+
         self.surrogate = surrogate
-        self.theta_ini = self.theta.clone().detach().numpy()
         self.theta_bounds = [np.min(surr_dataset.theta.clone().numpy(), axis=0), \
                               np.max(surr_dataset.theta.clone().numpy(), axis=0)] # [min_t1, min_t2], [max_t1, max_t2]
         self.step_sz = step_sz
-        self.theta.requires_grad_()
         self.optimizer = torch.optim.Adam([self.theta], lr=lr)
         self.epoch_n = epoch_n
 
-    def is_local(self,last_theta):
-        diff = parameters - self.nominal_parameters
+        self.box_covariance = np.array(len(theta_nominal)*[1]) if box_covariance is None else box_covariance
+
+
+    def is_local(self,theta_curr,scaler=2.):
+        diff = theta_curr - self.theta_nominal
         return np.dot(diff, np.dot(np.linalg.inv(self.box_covariance), diff)) < scaler
         # return np.all(last_theta >= self.theta_bounds[0]*0.9) and np.all(last_theta <= self.theta_bounds[1]*1.1)
 
@@ -48,7 +54,7 @@ class Optimizer():
             logger.info(f'epoch {epoch}, mi {mi_hat.item():.04f}, theta {theta_curr}')
             
         
-        return thetas
+        return np.array(thetas)
 
 
 class Flow_Optimizer(Optimizer):

@@ -5,6 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+import mplhep as hep
+plt.style.use(hep.style.CMS)
+
 from heputl import logging as heplog
 
 from minfnet.dats import input_generator as inge
@@ -128,22 +131,33 @@ def plot_inputs_one_theta(A_list, B_list, thetas, plot_name='scatter_plot', fig_
     plt.savefig(plot_path)
     plt.close(fig)
 
-def plot_inputs_two_theta(A_list, B_list, t1_list, t2_list, plot_name='scatter_plot', fig_dir='results'):
+def plot_inputs_multi_theta(A_list, B_list, thetas, xlabel='X', ylabel='Y', plot_name='scatter_plot', fig_dir='results'):
 
-    num_rows_cols = int(np.sqrt(len(t1_list)))
-    fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(6*len(t1_list), 8*len(t2_list)))
+    num_rows_cols = int(np.sqrt(len(thetas)))
+    fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(2*len(thetas), 2*len(thetas)))
     
     for i in range(num_rows_cols):
         for j in range(num_rows_cols):
             idx = i * num_rows_cols + j
+            min_val = min(min(A_list[idx]), min(B_list[idx]))
+            max_val = max(max(A_list[idx]), max(B_list[idx]))
             axs[i, j].scatter(A_list[idx], B_list[idx])
-            axs[i, j].set_xlabel('A')
-            axs[i, j].set_ylabel('B')
-            axs[i, j].set_title(f'theta1={t1_list[idx]:.03f}, theta2={t2_list[idx]:.03f}')
+            axs[i, j].set_xlim([min_val, max_val])
+            axs[i, j].set_ylim([min_val, max_val])
+            axs[i, j].set_xlabel(xlabel, fontsize=22)
+            axs[i, j].set_ylabel(ylabel, fontsize=22)
+            thetas_title = ','.join([f'{tt:.1f}' for tt in thetas[idx]])
+            axs[i, j].set_title(f'thetas='+thetas_title, fontsize=22)
     
+    plt.tight_layout()
+
     plot_path = os.path.join(fig_dir, plot_name+'.png')
     logger.info(f'saving plot to {plot_path}')
     plt.savefig(plot_path)
+
+
+def plot_inputs_two_theta(A_list, B_list, t1_list, t2_list, xlabel='X', ylabel='Y', plot_name='scatter_plot', fig_dir='results'):
+    plot_inputs_multi_theta(A_list, B_list, np.vstack([t1_list, t2_list]).T, xlabel, ylabel, plot_name, fig_dir)
 
 
 def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram', fig_dir='results'):
@@ -160,26 +174,60 @@ def plot_histogram(thetas, thetas_nominal, plot_name='theta_histogram', fig_dir=
     plt.savefig(plot_path)
 
 
-def plot_theta_vs_mi(theta, mi, truth=None, scatter_thetas=False, plot_name=None, fig_dir=None):
+def plot_theta_vs_mi(theta, mi, scatter_thetas=False, plot_name=None, fig_dir=None):
     # plot theta vs mi
     sorted_indices = np.argsort(theta)
     sorted_theta = theta[sorted_indices]
     sorted_mi = mi[sorted_indices]
-    if truth is not None:
-        sorted_truth = truth[sorted_indices]
 
     plt.figure(figsize=(7, 7))
     plt.plot(sorted_theta, sorted_mi, label='mime')
-    if truth is not None:
-        plt.plot(sorted_theta, sorted_truth, label='true mi')
     if scatter_thetas:
         plt.scatter(sorted_theta, sorted_mi, color='red', marker='>')
     plt.xlabel('Theta')
     plt.ylabel('MI')
     plt.title('Theta vs MI')
     plt.legend()
+    plt.tight_layout()
     if plot_name is not None and fig_dir is not None:
-        plt.savefig(f'{fig_dir}/{plot_name}.png')
+        plot_path = f'{fig_dir}/{plot_name}.png'
+        logger.info(f'saving plot to {plot_path}')
+        plt.savefig(plot_path)
+    # plt.show()
+    plt.close()
+
+
+def plot_theta_vs_mi_with_truth(theta, mi, truth=None, scatter_thetas=False, plot_name=None, fig_dir=None):
+    # plot theta vs mi
+    sorted_indices = np.argsort(theta)
+    sorted_theta = theta[sorted_indices]
+    sorted_mi = mi[sorted_indices]
+    sorted_truth = truth[sorted_indices]
+
+    fig, (ax1, ax2) = plt.subplots(2,1,figsize=(7,7), gridspec_kw={'height_ratios': [3, 1]})
+    ax1.plot(sorted_theta, sorted_mi, label='mime')
+    ax1.plot(sorted_theta, sorted_truth, label='true mi')
+    if scatter_thetas:
+        ax1.scatter(sorted_theta, sorted_mi, color='red', marker='>')
+    ax1.set_xlabel('Theta')
+    ax1.set_ylabel('MI')
+    plt.title('Theta vs MI')
+    ax1.legend()
+
+    squared_error = np.sqrt((mi - truth) ** 2)
+
+    ax2.scatter(theta, squared_error, color='orange')
+    ax2.set_xlabel('pu (logit)')
+    ax1.set_ylim(bottom=0,top=0.15)
+    ax2.set_ylabel("sqrt-err \n (approx - true) MI")
+    ax2.axhline(y=0., color='k', linestyle='-')
+    ax1.set_xticklabels([])
+    plt.tight_layout()
+
+    if plot_name is not None and fig_dir is not None:
+        plot_path = f'{fig_dir}/{plot_name}.png'
+        logger.info(f'saving plot to {plot_path}')
+        plt.savefig(plot_path)
     # plt.show()
     plt.close()
 
@@ -203,4 +251,27 @@ def plot_results_two_theta(result_ll, plot_name='mi_vs_theta', fig_dir='results'
 
     logger.info(f'saving results plot to {fig_dir}/{plot_name}')
     plt.savefig(fig_dir + '/' + plot_name+'.png')
+
+
+def plot_two_theta_vs_mi_with_one_theta_fixed(tt_chunks, train_mi_chunks, true_mi_chunks, fixed_thetas, fixed_theta_name, xlabel='theta', plot_name='mi_vs_theta', fig_dir='results'):
+
+    num_plots = len(tt_chunks)
+    fig, axs = plt.subplots(1, num_plots, figsize=(6*num_plots, 6))
+
+    for i in range(num_plots):
+        sorted_indices_2nd_theta = np.argsort(tt_chunks[i])
+        train_mi_chunk_sorted = train_mi_chunks[i][sorted_indices_2nd_theta]
+        true_mi_chunk_sorted = true_mi_chunks[i][sorted_indices_2nd_theta]
+
+        axs[i].plot(tt_chunks[i][sorted_indices_2nd_theta], train_mi_chunk_sorted, label='approx MI')
+        axs[i].plot(tt_chunks[i][sorted_indices_2nd_theta], true_mi_chunk_sorted, label='true MI')
+        axs[i].set_xlabel(xlabel)
+        axs[i].set_ylabel('MI')
+        axs[i].set_title(f'{fixed_theta_name}={fixed_thetas[i]:.03f}')
+        axs[i].legend()
+
+    plot_path = os.path.join(fig_dir, plot_name+'.png')
+    logger.info(f'saving plot to {plot_path}')
+    plt.savefig(plot_path)
+    plt.close(fig)
 
