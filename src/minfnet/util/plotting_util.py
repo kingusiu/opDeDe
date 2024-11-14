@@ -133,27 +133,40 @@ def plot_inputs_one_theta(A_list, B_list, thetas, plot_name='scatter_plot', fig_
 
 def plot_inputs_multi_theta(A_list, B_list, thetas, xlabel='X', ylabel='Y', plot_name='scatter_plot', fig_dir='results'):
 
-    num_rows_cols = int(np.sqrt(len(thetas)))
+    num_rows_cols = int(np.ceil(np.sqrt(len(thetas))))
     fig, axs = plt.subplots(num_rows_cols, num_rows_cols, figsize=(2*len(thetas), 2*len(thetas)))
     
+    layer_legend = []
+
     for i in range(num_rows_cols):
         for j in range(num_rows_cols):
             idx = i * num_rows_cols + j
-            min_val = min(min(A_list[idx]), min(B_list[idx]))
-            max_val = max(max(A_list[idx]), max(B_list[idx]))
-            axs[i, j].scatter(A_list[idx], B_list[idx])
+            if idx >= len(thetas): break
+            min_val = min(np.min(A_list[idx]), np.min(B_list[idx]))
+            max_val = max(np.max(A_list[idx]), np.max(B_list[idx]))
+            for layer_hits in B_list[idx].T:
+                ll = axs[i, j].scatter(A_list[idx], layer_hits, marker='.', s=40)
+                if idx == 0: layer_legend.append(ll)
             axs[i, j].set_xlim([min_val, max_val])
             axs[i, j].set_ylim([min_val, max_val])
-            axs[i, j].set_xlabel(xlabel, fontsize=22)
-            axs[i, j].set_ylabel(ylabel, fontsize=22)
+            if i == num_rows_cols-1:
+                axs[i, j].set_xlabel(xlabel, fontsize=22)
+            if j == 0:
+                axs[i, j].set_ylabel(ylabel, fontsize=22)
             thetas_title = ','.join([f'{tt:.1f}' for tt in thetas[idx]])
-            axs[i, j].set_title(f'thetas='+thetas_title, fontsize=22)
+            axs[i, j].set_title(r'$\theta$=' + thetas_title, fontsize=22)
+
+    if axs.size > len(thetas): 
+        for ax in axs.flat[len(thetas):]: ax.axis('off')
+    
+    leg = fig.legend(layer_legend, [f'layer {i}' for i in range(len(layer_legend))], loc='lower center', \
+                     bbox_to_anchor=(0.5,-0.1), fontsize=22, ncol=len(layer_legend), markerscale=5)
     
     plt.tight_layout()
 
     plot_path = os.path.join(fig_dir, plot_name+'.png')
     logger.info(f'saving plot to {plot_path}')
-    plt.savefig(plot_path)
+    plt.savefig(plot_path, bbox_extra_artists=(leg,), bbox_inches="tight")
 
 
 def plot_inputs_two_theta(A_list, B_list, t1_list, t2_list, xlabel='X', ylabel='Y', plot_name='scatter_plot', fig_dir='results'):
